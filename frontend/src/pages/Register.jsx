@@ -1,11 +1,16 @@
 import { useState } from "react";
 import "../styles/Register.css";
+import { registerUser } from "../services/authService";
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    const navigate = useNavigate();
+
     async function handleRegister(event) {
         event.preventDefault();
 
@@ -19,6 +24,10 @@ function Register() {
 
         if (response.ok) {
             alert(data.message);
+
+            setTimeout(() => {
+                navigate("/");
+            }, 2000);
         } else {
             alert(data.detail);
         }
@@ -77,8 +86,8 @@ function Register() {
                 </form>
 
                 <div className="login-link">
-                    Already have an account?
-                    <a href="login.jsx"> Login</a>
+                    Already have an account?{" "}
+                    <Link to="/">Login</Link>
                 </div>
             </div>
         </div>

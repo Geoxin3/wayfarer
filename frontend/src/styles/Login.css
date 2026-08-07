@@ -1,40 +1,30 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f4f7fb;
-}
-
-.register-container {
+.login-container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #2193b0, #6dd5ed);
+    background: linear-gradient(135deg, #6dd5ed, #2193b0);
+    font-family: Arial, Helvetica, sans-serif;
 }
 
-.register-box {
-    width: 400px;
+.login-box {
+    width: 380px;
     background: white;
-    padding: 35px;
+    padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,.15);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-.register-box h1 {
+.login-box h1 {
     text-align: center;
-    color: #2193b0;
     margin-bottom: 10px;
+    color: #2193b0;
 }
 
-.register-box p {
+.login-box p {
     text-align: center;
-    margin-bottom: 25px;
     color: #666;
+    margin-bottom: 30px;
 }
 
 .input-box {
@@ -46,14 +36,15 @@ body {
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
-    font-size: 15px;
-    transition: .3s;
+    font-size: 16px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .input-box input:focus {
-    outline: none;
     border-color: #2193b0;
-    box-shadow: 0 0 8px rgba(33,147,176,.3);
+    box-shadow: 0 0 8px rgba(33, 147, 176, 0.3);
 }
 
 button {
@@ -65,25 +56,25 @@ button {
     color: white;
     font-size: 16px;
     cursor: pointer;
-    transition: .3s;
+    transition: background 0.3s;
 }
 
 button:hover {
     background: #176d82;
 }
 
-.login-link {
-    margin-top: 20px;
+.register-link {
     text-align: center;
+    margin-top: 20px;
     font-size: 14px;
 }
 
-.login-link a {
+.register-link a {
     color: #2193b0;
     text-decoration: none;
     font-weight: bold;
 }
 
-.login-link a:hover {
+.register-link a:hover {
     text-decoration: underline;
 }

@@ -1,11 +1,17 @@
+import { apiRequest } from "./api";
+
+// register user
 export async function registerUser(userData) {
-    const response = await fetch("http://localhost:8000/auth/register", {
+    return apiRequest("/auth/register", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
         body: JSON.stringify(userData),
     });
+}
 
-    return response;
+// login user
+export async function loginUser(userData) {
+    return apiRequest("/auth/login", {
+        method: "POST",
+        body: JSON.stringify(userData),
+    })
 }
