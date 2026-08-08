@@ -1,31 +1,19 @@
-import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
 
-function App() {
-  const [message, setMessage] = useState("");
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Home from "./pages/Home";
 
-  async function getBackendMessage() {
-    try {
-      const response = await fetch("http://localhost:8000/");
-      const data = await response.json();
+  function App() {
+    return (
+      <Routes>
+          <Route path="/" element={<Login />} />
 
-      setMessage(data.message);
-    } catch (error) {
-      console.error(error);
-      setMessage("Failed to connect to backend.");
-    }
+          <Route path="/register" element={<Register />} />
+
+          <Route path="/home" element={<Home />} />
+      </Routes>
+    );
   }
 
-  return (
-    <div>
-      <h1>Wayfarer</h1>
-      
-      <button onClick={getBackendMessage}>
-        Get Backend Message
-      </button>
-
-      <p>{message}</p>
-    </div>
-  );
-}
-
-export default App;
+  export default App 
