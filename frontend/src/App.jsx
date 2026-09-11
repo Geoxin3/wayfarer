@@ -5,6 +5,8 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Destinations from "./pages/Destinations";
 import DestinationDetails from "./pages/DestinationDetails";
+import AdminLogin from "./admin/AdminLogin";
+import AdminHome from "./admin/AdminHome";
 
   function App() {
     return (
@@ -18,6 +20,10 @@ import DestinationDetails from "./pages/DestinationDetails";
           <Route path="/destinations" element={<Destinations />} />
 
           <Route path="/destinations/:id" element={<DestinationDetails />} />
+
+          <Route path="/admin" element={<AdminLogin />} />
+
+          <Route path="/admin/home" element={<AdminHome />} />
       </Routes>
     );
   }
