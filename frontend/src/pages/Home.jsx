@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Destinations from "./Destinations";
 import "../styles/Home.css";
+import { getDestinations } from "../services/destinationService";
 
 function Home() {
   const [destinations, setDestinations] = useState([]);
@@ -9,7 +9,7 @@ function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:8000/destinations?page=1&limit=6")
+    getDestinations(1, 6)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Server returned ${response.status}`);

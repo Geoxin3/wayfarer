@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/Destinations.css";
+import { getDestinations } from "../services/destinationService";
 
 function Destinations() {
   const [destinations, setDestinations] = useState([]);
@@ -20,9 +21,7 @@ function Destinations() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        `http://localhost:8000/destinations?page=${page}&limit=${limit}`
-      );
+      const response = await getDestinations(page, limit);
 
       if (!response.ok) {
         throw new Error("Failed to fetch destinations");

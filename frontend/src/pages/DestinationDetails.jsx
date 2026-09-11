@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "../styles/DestinationDetails.css";
+import { getDestination } from "../services/destinationService";
 
 function DestinationDetails() {
   const { id } = useParams();
@@ -10,7 +11,7 @@ function DestinationDetails() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`http://localhost:8000/destinations/${id}`)
+    getDestination(id)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Destination not found");
