@@ -180,6 +180,28 @@
   color: #dc2626;
 }
 
+.plan-trip-button {
+  display: inline-block;
+  padding: 10px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  
+    transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.plan-trip-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
 @media (max-width: 640px) {
   .hero {
     padding: 75px 20px 65px;

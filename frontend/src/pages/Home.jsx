@@ -47,10 +47,15 @@ function Home() {
           <p>Find places worth visiting.</p>
         </div>
 
+        <Link to="/trips" className="plan-trip-button">
+          Your Trips →
+        </Link>
+
+        <br></br>
         {loading && <p className="loading">Loading destinations...</p>}
 
         {error && <p className="error">Error: {error}</p>}
-
+        <br></br>
         {!loading && !error && (
         <div className="destination-grid">
           {destinations.map((destination) => (
