@@ -32,5 +32,6 @@ def login(user_data: UserLogin, db: Session=Depends(get_db)):
         )
 
     return {
-        "message": "User logined successfully"
+        "message": "User logined successfully",
+        "id": user.id
     }

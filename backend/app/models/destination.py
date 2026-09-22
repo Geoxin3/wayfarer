@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy import Numeric, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Numeric, String, Text, UniqueConstraint
 
 from app.core.database import Base
@@ -51,4 +51,10 @@ class Destination(Base):
     best_time_to_visit: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
+    )
+
+    trips: Mapped[list["Trip"]] = relationship(
+        secondary="trip_destinations",
+        back_populates="destinations",
+        viewonly=True
     )

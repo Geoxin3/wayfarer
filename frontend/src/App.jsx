@@ -7,6 +7,9 @@ import Destinations from "./pages/Destinations";
 import DestinationDetails from "./pages/DestinationDetails";
 import AdminLogin from "./admin/AdminLogin";
 import AdminHome from "./admin/AdminHome";
+import MyTrips from "./pages/MyTrip";
+import PlanTrip from "./pages/PlanTrip";
+import TripDetails from "./pages/TripDetails";
 
   function App() {
     return (
@@ -24,6 +27,12 @@ import AdminHome from "./admin/AdminHome";
           <Route path="/admin" element={<AdminLogin />} />
 
           <Route path="/admin/home" element={<AdminHome />} />
+
+          <Route path="/trips" element={<MyTrips />} />
+
+          <Route path="/trips/plan" element={<PlanTrip />} />
+
+          <Route path="/trips/:tripId" element={<TripDetails />} />
       </Routes>
     );
   }

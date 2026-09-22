@@ -8,6 +8,8 @@ from alembic import context
 from app.core.database import Base
 from app.models.user import User
 from app.models.destination import Destination
+from app.models.trip import Trip
+from app.models.trip_destination import TripDestination
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
