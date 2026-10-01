@@ -10,6 +10,9 @@ from app.models.user import User
 from app.models.destination import Destination
 from app.models.trip import Trip
 from app.models.trip_destination import TripDestination
+from app.models.destination_month import DestinationMonth
+from app.models.interest import Interest
+from app.models.destination_interest import DestinationInterest
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

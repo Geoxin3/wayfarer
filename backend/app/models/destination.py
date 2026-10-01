@@ -48,6 +48,14 @@ class Destination(Base):
         nullable=False,
     )
 
+    recommended_min_days: Mapped[int] = mapped_column(
+        nullable=False,
+    )
+
+    recommended_max_days: Mapped[int] = mapped_column(
+        nullable=False,
+    )
+
     best_time_to_visit: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

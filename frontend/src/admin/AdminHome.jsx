@@ -13,7 +13,10 @@ const emptyForm = {
   location: "",
   category: "",
   estimated_cost: "",
-  best_time_to_visit: "",
+  recommended_min_days: "",
+  recommended_max_days: "",
+  months: [],
+  interest_ids: [],
 };
 
 function AdminHome() {
@@ -29,6 +32,72 @@ function AdminHome() {
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const formRef = useRef(null);
+
+  const months = [
+    { value: 1, name: "January" },
+    { value: 2, name: "February" },
+    { value: 3, name: "March" },
+    { value: 4, name: "April" },
+    { value: 5, name: "May" },
+    { value: 6, name: "June" },
+    { value: 7, name: "July" },
+    { value: 8, name: "August" },
+    { value: 9, name: "September" },
+    { value: 10, name: "October" },
+    { value: 11, name: "November" },
+    { value: 12, name: "December" },
+  ];
+
+    const getBestTimeToVisit = (selectedMonths) => {
+    if (selectedMonths.length === 0) {
+      return "";
+    }
+
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const orderedMonths = [...selectedMonths].sort((a, b) => a - b);
+
+    if (orderedMonths.length === 1) {
+      return monthNames[orderedMonths[0] - 1];
+    }
+
+    const isNormalRange = orderedMonths.every(
+      (month, index) =>
+        index === 0 || month === orderedMonths[index - 1] + 1
+    );
+
+    if (isNormalRange) {
+      return `${monthNames[orderedMonths[0] - 1]} to ${
+        monthNames[orderedMonths[orderedMonths.length - 1] - 1]
+      }`;
+    }
+
+    const firstPart = orderedMonths.filter((month) => month >= 10);
+    const secondPart = orderedMonths.filter((month) => month <= 3);
+
+    if (firstPart.length > 0 && secondPart.length > 0) {
+      return `${monthNames[firstPart[0] - 1]} to ${
+        monthNames[secondPart[secondPart.length - 1] - 1]
+      }`;
+    }
+
+    return orderedMonths
+      .map((month) => monthNames[month - 1])
+      .join(", ");
+  };  
 
   const fetchDestinations = async () => {
     try {
@@ -64,6 +133,33 @@ function AdminHome() {
     }));
   };
 
+  const handleMonthChange = (month) => {
+    setFormData((prev) => {
+      const alreadySelected = prev.months.includes(month);
+
+      return {
+        ...prev,
+        months: alreadySelected
+          ? prev.months.filter((item) => item !== month)
+          : [...prev.months, month],
+      };
+    });
+  };
+
+  const handleInterestIdsChange = (event) => {
+    const value = event.target.value;
+
+    const interestIds = value
+      .split(",")
+      .map((id) => Number(id.trim()))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    setFormData((prev) => ({
+      ...prev,
+      interest_ids: interestIds,
+    }));
+  };
+
   const openAddForm = () => {
     setEditingId(null);
     setFormData(emptyForm);
@@ -71,28 +167,31 @@ function AdminHome() {
     setShowForm(true);
   };
 
-    const openEditForm = (destination) => {
+  const openEditForm = (destination) => {
     setEditingId(destination.id);
 
     setFormData({
-        name: destination.name,
-        description: destination.description,
-        location: destination.location,
-        category: destination.category,
-        estimated_cost: destination.estimated_cost,
-        best_time_to_visit: destination.best_time_to_visit,
+      name: destination.name,
+      description: destination.description,
+      location: destination.location,
+      category: destination.category,
+      estimated_cost: destination.estimated_cost,
+      recommended_min_days: destination.recommended_min_days,
+      recommended_max_days: destination.recommended_max_days,
+      months: destination.months || [],
+      interest_ids: destination.interest_ids || [],
     });
 
     setFormError("");
     setShowForm(true);
 
     setTimeout(() => {
-        formRef.current?.scrollIntoView({
+      formRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "start",
-        });
+      });
     }, 0);
-    };
+  };
 
   const closeForm = () => {
     if (submitting) {
@@ -118,7 +217,11 @@ function AdminHome() {
         location: formData.location,
         category: formData.category,
         estimated_cost: formData.estimated_cost,
-        best_time_to_visit: formData.best_time_to_visit,
+        recommended_min_days: Number(formData.recommended_min_days),
+        recommended_max_days: Number(formData.recommended_max_days),
+        best_time_to_visit: getBestTimeToVisit(formData.months),
+        months: formData.months,
+        interest_ids: formData.interest_ids,
       };
 
       const response = editingId
@@ -129,7 +232,8 @@ function AdminHome() {
         const data = await response.json();
 
         throw new Error(
-          data.detail || `Failed to ${editingId ? "update" : "create"} destination`
+          data.detail ||
+            `Failed to ${editingId ? "update" : "create"} destination`
         );
       }
 
@@ -170,24 +274,26 @@ function AdminHome() {
 
   return (
     <div className="admin-home">
-        <header className="admin-home-header">
+      <header className="admin-home-header">
         <div>
-            <span className="admin-home-eyebrow">WAYFARER ADMIN</span>
+          <span className="admin-home-eyebrow">WAYFARER ADMIN</span>
 
-            <h1>Destination Management</h1>
+          <h1>Destination Management</h1>
 
-            <p>
+          <p>
             Manage the destinations available on Wayfarer.
-            </p>
+          </p>
         </div>
+
         <div></div>
+
         <button
-            className="admin-add-button"
-            onClick={openAddForm}
+          className="admin-add-button"
+          onClick={openAddForm}
         >
-            + Add Destination
+          + Add Destination
         </button>
-        </header>
+      </header>
 
       <main className="admin-home-content">
         <div className="admin-destination-count">
@@ -281,19 +387,71 @@ function AdminHome() {
                   />
                 </div>
 
-                <div className="admin-form-field admin-form-field-full">
-                  <label htmlFor="best_time_to_visit">
-                    Best Time to Visit
+                <div className="admin-form-field">
+                  <label htmlFor="recommended_min_days">
+                    Minimum Trip Days
                   </label>
 
                   <input
-                    id="best_time_to_visit"
-                    name="best_time_to_visit"
-                    type="text"
-                    value={formData.best_time_to_visit}
+                    id="recommended_min_days"
+                    name="recommended_min_days"
+                    type="number"
+                    min="1"
+                    value={formData.recommended_min_days}
                     onChange={handleInputChange}
-                    placeholder="e.g. October to March"
+                    placeholder="e.g. 2"
                     required
+                  />
+                </div>
+
+                <div className="admin-form-field">
+                  <label htmlFor="recommended_max_days">
+                    Maximum Trip Days
+                  </label>
+
+                  <input
+                    id="recommended_max_days"
+                    name="recommended_max_days"
+                    type="number"
+                    min="1"
+                    value={formData.recommended_max_days}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 5"
+                    required
+                  />
+                </div>
+
+                <div className="admin-form-field-full">
+                  <label>Suitable Months</label>
+
+                  <div className="month-selector">
+                    {months.map((month) => (
+                      <label className="month-option" key={month.value}>
+                        <input
+                          type="checkbox"
+                          value={month.value}
+                          checked={formData.months.includes(month.value)}
+                          onChange={() => handleMonthChange(month.value)}
+                        />
+
+                        <span>{month.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="admin-form-field admin-form-field-full">
+                  <label htmlFor="interest_ids">
+                    Interest IDs
+                  </label>
+
+                  <input
+                    id="interest_ids"
+                    name="interest_ids"
+                    type="text"
+                    value={formData.interest_ids.join(", ")}
+                    onChange={handleInterestIdsChange}
+                    placeholder="e.g. 1, 2, 3"
                   />
                 </div>
 

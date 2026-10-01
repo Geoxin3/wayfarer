@@ -3,7 +3,7 @@ from app.schemas.destination import DestinationCreate, DestinationResponse, Dest
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-from app.services.destination_service import create_destination, get_destinations, get_destination, update_destinaiton, delete_destination
+from app.services.destination_service import create_destination, get_destinations, get_destination, update_destinaiton, delete_destination, get_destination_model
 
 router = APIRouter(prefix="/destinations", tags=["Destinations"])
 
@@ -26,10 +26,7 @@ def get_all(
     destinations, total = get_destinations(db, page, limit)
 
     return {
-        "items" : [
-            DestinationResponse.model_validate(destination)
-            for destination in destinations
-        ],
+        "items" : destinations,
         "page": page,
         "limit": limit,
         "total": total
@@ -49,7 +46,7 @@ def get_one(destination_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{destination_id}", response_model=DestinationResponse)
 def update(destination_id: int, destination_data: DestinationUpdate, db: Session = Depends(get_db)):
-    destination = get_destination(db, destination_id)
+    destination = get_destination_model(db, destination_id)
 
     if destination is None:
         raise HTTPException(
@@ -61,7 +58,7 @@ def update(destination_id: int, destination_data: DestinationUpdate, db: Session
 
 @router.delete("/{destination_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(destination_id: int, db: Session = Depends(get_db)):
-    destination = get_destination(db, destination_id)
+    destination = get_destination_model(db, destination_id)
 
     if destination is None:
         raise HTTPException(
