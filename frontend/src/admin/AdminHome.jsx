@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./styles/AdminHome.css";
 import {
   getDestinations,
+  getInterests,
   createDestination,
   updateDestination,
   deleteDestination,
@@ -21,6 +22,7 @@ const emptyForm = {
 
 function AdminHome() {
   const [destinations, setDestinations] = useState([]);
+  const [interests, setInterests] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
 
   const [showForm, setShowForm] = useState(false);
@@ -120,8 +122,25 @@ function AdminHome() {
     }
   };
 
+  const fetchInterests = async () => {
+    try {
+      const response = await getInterests();
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch interests");
+      }
+
+      const data = await response.json();
+
+      setInterests(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   useEffect(() => {
     fetchDestinations();
+    fetchInterests();
   }, []);
 
   const handleInputChange = (event) => {
@@ -146,18 +165,17 @@ function AdminHome() {
     });
   };
 
-  const handleInterestIdsChange = (event) => {
-    const value = event.target.value;
+  const handleInterestChange = (interestId) => {
+    setFormData((prev) => {
+      const alreadySelected = prev.interest_ids.includes(interestId);
 
-    const interestIds = value
-      .split(",")
-      .map((id) => Number(id.trim()))
-      .filter((id) => Number.isInteger(id) && id > 0);
-
-    setFormData((prev) => ({
-      ...prev,
-      interest_ids: interestIds,
-    }));
+      return {
+        ...prev,
+        interest_ids: alreadySelected
+          ? prev.interest_ids.filter((id) => id !== interestId)
+          : [...prev.interest_ids, interestId],
+      };
+    });
   };
 
   const openAddForm = () => {
@@ -440,20 +458,26 @@ function AdminHome() {
                   </div>
                 </div>
 
-                <div className="admin-form-field admin-form-field-full">
-                  <label htmlFor="interest_ids">
-                    Interest IDs
-                  </label>
+<div className="admin-form-field admin-form-field-full">
+  <label>Interests</label>
 
-                  <input
-                    id="interest_ids"
-                    name="interest_ids"
-                    type="text"
-                    value={formData.interest_ids.join(", ")}
-                    onChange={handleInterestIdsChange}
-                    placeholder="e.g. 1, 2, 3"
-                  />
-                </div>
+  <div className="interest-selector">
+    {interests.map((interest) => (
+      <label
+        className="interest-option"
+        key={interest.id}
+      >
+        <input
+          type="checkbox"
+          checked={formData.interest_ids.includes(interest.id)}
+          onChange={() => handleInterestChange(interest.id)}
+        />
+
+        <span>{interest.name}</span>
+      </label>
+    ))}
+  </div>
+</div>
 
                 <div className="admin-form-field admin-form-field-full">
                   <label htmlFor="description">Description</label>

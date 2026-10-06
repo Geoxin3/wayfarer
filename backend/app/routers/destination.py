@@ -3,7 +3,15 @@ from app.schemas.destination import DestinationCreate, DestinationResponse, Dest
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-from app.services.destination_service import create_destination, get_destinations, get_destination, update_destinaiton, delete_destination, get_destination_model
+from app.services.destination_service import (
+    create_destination,
+    get_destinations,
+    get_destination,
+    update_destinaiton,
+    delete_destination,
+    get_destination_model,
+    get_interests
+)
 
 router = APIRouter(prefix="/destinations", tags=["Destinations"])
 
@@ -32,6 +40,10 @@ def get_all(
         "total": total
     }
 
+@router.get("/interests")
+def get_all_interests(db: Session = Depends(get_db)):
+    return get_interests(db)
+    
 @router.get("/{destination_id}", response_model=DestinationResponse)
 def get_one(destination_id: int, db: Session = Depends(get_db)):
     destination = get_destination(db, destination_id)

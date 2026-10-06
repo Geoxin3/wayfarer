@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from app.models.destination import Destination
 from app.models.destination_month import DestinationMonth
 from app.models.destination_interest import DestinationInterest
+from app.models.interest import Interest
 from app.schemas.destination import DestinationCreate, DestinationUpdate
 
 # helper destination response
@@ -153,3 +154,8 @@ def delete_destination(db: Session, destinaiton: Destination) -> None:
     db.delete(destinaiton)
 
     db.commit()
+
+def get_interests(db: Session):
+    return db.scalars(
+        select(Interest).order_by(Interest.name)
+    ).all()
