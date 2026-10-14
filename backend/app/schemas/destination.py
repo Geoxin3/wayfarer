@@ -7,7 +7,12 @@ class DestinationCreate(BaseModel):
     location: str
     category: str
     estimated_cost: Decimal
+    recommended_min_days: int
+    recommended_max_days: int
     best_time_to_visit: str
+
+    months: list[int]
+    interest_ids: list[int]
 
 class DestinationUpdate(BaseModel):
     name: str | None = None
@@ -15,7 +20,12 @@ class DestinationUpdate(BaseModel):
     location: str | None = None
     category: str | None = None
     estimated_cost: Decimal | None = None
+    recommended_min_days: int | None = None
+    recommended_max_days: int | None = None
     best_time_to_visit: str | None = None
+
+    months: list[int] | None = None
+    interest_ids: list[int] | None = None
 
 class DestinationResponse(BaseModel):
     id: int
@@ -24,7 +34,12 @@ class DestinationResponse(BaseModel):
     location: str
     category: str
     estimated_cost: Decimal
+    recommended_min_days: int
+    recommended_max_days: int
     best_time_to_visit: str
+
+    months: list[int]
+    interest_ids: list[int]
 
     model_config = ConfigDict(from_attributes=True)
 

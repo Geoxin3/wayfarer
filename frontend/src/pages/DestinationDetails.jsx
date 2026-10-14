@@ -1,26 +1,38 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "../styles/DestinationDetails.css";
-import { getDestination } from "../services/destinationService";
+import {
+  getDestination,
+  getInterests,
+} from "../services/destinationService";
 
 function DestinationDetails() {
   const { id } = useParams();
 
   const [destination, setDestination] = useState(null);
+  const [interests, setInterests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getDestination(id)
-      .then((response) => {
-        if (!response.ok) {
+    Promise.all([
+      getDestination(id),
+      getInterests(),
+    ])
+      .then(async ([destinationResponse, interestsResponse]) => {
+        if (!destinationResponse.ok) {
           throw new Error("Destination not found");
         }
 
-        return response.json();
-      })
-      .then((data) => {
-        setDestination(data);
+        if (!interestsResponse.ok) {
+          throw new Error("Failed to fetch interests");
+        }
+
+        const destinationData = await destinationResponse.json();
+        const interestsData = await interestsResponse.json();
+
+        setDestination(destinationData);
+        setInterests(interestsData);
       })
       .catch((err) => {
         console.error("Destination fetch error:", err);
@@ -55,6 +67,27 @@ function DestinationDetails() {
         <p className="destination-description">
           {destination.description}
         </p>
+
+        <div className="destination-experiences">
+          <span className="destination-experiences-label">
+            Experiences
+          </span>
+
+          <div className="destination-experiences-list">
+            {interests
+              .filter((interest) =>
+                destination.interest_ids.includes(interest.id)
+              )
+              .map((interest) => (
+                <span
+                  className="destination-experience"
+                  key={interest.id}
+                >
+                  {interest.name}
+                </span>
+              ))}
+          </div>
+        </div>
 
         <div className="destination-info">
           <div>

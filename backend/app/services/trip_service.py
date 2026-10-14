@@ -5,6 +5,7 @@ from app.models.trip import Trip
 from app.models.destination import Destination
 from app.models.trip_destination import TripDestination
 from app.schemas.trip import TripCreate
+from app.services.destination_service import build_destination_response
 
 def create_trip(db: Session, trip_data: TripCreate):
     trip = Trip(
@@ -23,11 +24,27 @@ def create_trip(db: Session, trip_data: TripCreate):
 def get_user_trips(db: Session, user_id: int):
     result = db.execute(
         select(Trip)
+        .options(selectinload(Trip.destinations))
         .where(Trip.user_id == user_id)
         .order_by(Trip.id.desc())
     )
 
-    return result.scalars().all()
+    trips = result.scalars().all()
+
+    return [
+        {
+            "id": trip.id,
+            "name": trip.name,
+            "start_date": trip.start_date,
+            "end_date": trip.end_date,
+            "user_id": trip.user_id,
+            "destinations": [
+                build_destination_response(db, destination)
+                for destination in trip.destinations
+            ],
+        }
+        for trip in trips
+    ]
 
 def get_trip(db: Session, trip_id: int, user_id: int):
     result = db.execute(
@@ -39,7 +56,22 @@ def get_trip(db: Session, trip_id: int, user_id: int):
         )
     )
 
-    return result.scalar_one_or_none()
+    trip = result.scalar_one_or_none()
+
+    if trip is None:
+        return None
+
+    return {
+        "id": trip.id,
+        "name": trip.name,
+        "start_date": trip.start_date,
+        "end_date": trip.end_date,
+        "user_id": trip.user_id,
+        "destinations": [
+            build_destination_response(db, destination)
+            for destination in trip.destinations
+        ],
+    }
 
 def add_destination_to_trip(db: Session, trip_id: int, destination_id: int):
     trip = db.get(Trip, trip_id)

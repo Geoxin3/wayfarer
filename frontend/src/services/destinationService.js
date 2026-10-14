@@ -8,6 +8,10 @@ export async function getDestination(id) {
     return apiRequest(`/destinations/${id}`);
 }
 
+export async function getInterests() {
+    return apiRequest("/destinations/interests");
+}
+
 export async function createDestination(destinationData) {
     return apiRequest("/destinations/", {
         method: "POST",

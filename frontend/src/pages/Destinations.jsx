@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/Destinations.css";
-import { getDestinations } from "../services/destinationService";
+import {
+  getDestinations,
+  getInterests,
+} from "../services/destinationService";
 
 function Destinations() {
   const [destinations, setDestinations] = useState([]);
+  const [interests, setInterests] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -15,6 +19,10 @@ function Destinations() {
   useEffect(() => {
     fetchDestinations();
   }, [page]);
+
+  useEffect(() => {
+    fetchInterests();
+  }, []);
 
   const fetchDestinations = async () => {
     try {
@@ -35,6 +43,22 @@ function Destinations() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInterests = async () => {
+    try {
+      const response = await getInterests();
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch interests");
+      }
+
+      const data = await response.json();
+
+      setInterests(data);
+    } catch (err) {
+      console.error("Interest fetch error:", err);
     }
   };
 
@@ -94,6 +118,22 @@ function Destinations() {
                   {destination.description}
                 </p>
               </div>
+
+              {destination.interest_ids?.length > 0 && (
+                <div className="destination-interests">
+                  {destination.interest_ids.map((interestId) => {
+                    const interest = interests.find(
+                      (item) => item.id === interestId
+                    );
+
+                    return interest ? (
+                      <span key={interest.id} className="interest-pill">
+                        {interest.name}
+                      </span>
+                    ) : null;
+                  })} 
+                </div>
+              )}
 
               <div className="destination-list-card-footer">
                 <div className="destination-list-info">
