@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import {
+  CalendarDays,
+  MapPin,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 import "../styles/DestinationDetails.css";
 import {
   getDestination,
@@ -54,6 +60,11 @@ function DestinationDetails() {
   return (
     <div className="destination-details-page">
       <div className="destination-details-card">
+        <div
+          className="destination-details-image-container"
+          aria-label={`Image area for ${destination.name}`}
+        />
+
         <span className="destination-category">
           {destination.category}
         </span>
@@ -61,7 +72,8 @@ function DestinationDetails() {
         <h1>{destination.name}</h1>
 
         <p className="destination-location">
-          📍 {destination.location}
+          <MapPin size={15} aria-hidden="true" />
+          <span>{destination.location}</span>
         </p>
 
         <p className="destination-description">
@@ -70,6 +82,7 @@ function DestinationDetails() {
 
         <div className="destination-experiences">
           <span className="destination-experiences-label">
+            <Sparkles size={16} aria-hidden="true" />
             Experiences
           </span>
 
@@ -91,14 +104,31 @@ function DestinationDetails() {
 
         <div className="destination-info">
           <div>
-            <span>Estimated Cost</span>
+            <span>
+              <Wallet size={15} aria-hidden="true" />
+              Estimated Cost
+            </span>
             <strong>₹{destination.estimated_cost}</strong>
           </div>
 
           <div>
-            <span>Best Time to Visit</span>
+            <span>
+              <CalendarDays size={15} aria-hidden="true" />
+              Best Time to Visit
+            </span>
             <strong>{destination.best_time_to_visit}</strong>
           </div>
+
+        <div className="duration-info">
+          <span>
+            <CalendarDays size={15} aria-hidden="true" />
+            Duration
+          </span>
+          <strong>
+            {destination.recommended_min_days} -{" "}
+            {destination.recommended_max_days} days
+          </strong>
+        </div>
         </div>
       </div>
     </div>

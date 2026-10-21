@@ -21,7 +21,7 @@ function Login() {
 
         if (response.ok) {
             localStorage.setItem("userId", data.id);
-            navigate("/home");
+            navigate("/home", { replace: true });
         } else {
             alert(data.detail);
         }

@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  CalendarCheck,
+  CalendarDays,
+  Luggage,
+  X,
+} from "lucide-react";
 import { createTrip } from "../services/tripService";
 import "../styles/PlanTrip.css";
 
@@ -107,6 +114,7 @@ function PlanTrip() {
 
           <div className="form-group">
             <label htmlFor="trip-name">
+              <Luggage size={15} aria-hidden="true" />
               Trip Name
             </label>
 
@@ -125,6 +133,7 @@ function PlanTrip() {
           <div className="date-row">
             <div className="form-group">
               <label htmlFor="start-date">
+                <CalendarDays size={15} aria-hidden="true" />
                 Start Date
               </label>
 
@@ -142,6 +151,7 @@ function PlanTrip() {
 
             <div className="form-group">
               <label htmlFor="end-date">
+                <CalendarCheck size={15} aria-hidden="true" />
                 End Date
               </label>
 
@@ -172,6 +182,7 @@ function PlanTrip() {
             onClick={() => navigate("/trips")}
             disabled={loading}
           >
+            <X size={16} aria-hidden="true" />
             Cancel
           </button>
 
@@ -180,9 +191,14 @@ function PlanTrip() {
             className="create-trip-button"
             disabled={loading}
           >
-            {loading
-              ? "Creating Trip..."
-              : "Create Trip →"}
+            {loading ? (
+              "Creating Trip..."
+            ) : (
+              <>
+                Create Trip
+                <ArrowRight size={16} aria-hidden="true" />
+              </>
+            )}
           </button>
         </div>
       </form>

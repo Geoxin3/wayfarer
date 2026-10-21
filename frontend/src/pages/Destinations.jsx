@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  MapPin,
+  Wallet,
+} from "lucide-react";
 import "../styles/Destinations.css";
 import {
   getDestinations,
@@ -101,13 +108,19 @@ function Destinations() {
               className="destination-list-card"
               key={destination.id}
             >
+              <div
+                className="destination-list-image-container"
+                aria-label={`Image area for ${destination.name}`}
+              />
+
               <div className="destination-list-card-top">
                 <span className="destination-list-category">
                   {destination.category}
                 </span>
 
                 <span className="destination-list-location">
-                  📍 {destination.location}
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>{destination.location}</span>
                 </span>
               </div>
 
@@ -131,22 +144,41 @@ function Destinations() {
                         {interest.name}
                       </span>
                     ) : null;
-                  })} 
+                  })}
                 </div>
               )}
 
               <div className="destination-list-card-footer">
                 <div className="destination-list-info">
-                  <span>Estimated cost</span>
+                  <span>
+                    <Wallet size={13} aria-hidden="true" />
+                    Estimated cost
+                  </span>
                   <strong>₹{destination.estimated_cost}</strong>
                 </div>
 
                 <div className="destination-list-info">
-                  <span>Best time</span>
+                  <span>
+                    <CalendarDays size={13} aria-hidden="true" />
+                    Best time
+                  </span>
                   <strong>{destination.best_time_to_visit}</strong>
                 </div>
 
-                <span className="destination-list-arrow">→</span>
+                <div className="destination-list-info duration-info">
+                  <span>
+                    <CalendarDays size={13} aria-hidden="true" />
+                    Duration
+                  </span>
+                  <strong>
+                    {destination.recommended_min_days} -{" "}
+                    {destination.recommended_max_days} days
+                  </strong>
+                </div>
+
+                <span className="destination-list-arrow">
+                  <ArrowRight size={22} aria-hidden="true" />
+                </span>
               </div>
             </Link>
           ))}
@@ -163,7 +195,8 @@ function Destinations() {
             onClick={() => setPage((prev) => prev - 1)}
             disabled={page === 1}
           >
-            ← Previous
+            <ArrowLeft size={15} aria-hidden="true" />
+            Previous
           </button>
 
           <span>
@@ -174,7 +207,8 @@ function Destinations() {
             onClick={() => setPage((prev) => prev + 1)}
             disabled={page === totalPages}
           >
-            Next →
+            Next
+            <ArrowRight size={15} aria-hidden="true" />
           </button>
         </nav>
       )}
