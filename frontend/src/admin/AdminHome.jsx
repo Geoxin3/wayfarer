@@ -1,9 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import "./styles/AdminHome.css";
 import {
+  ArrowUpDown,
   CalendarDays,
   Check,
+  ChevronDown,
   Clock,
   Compass,
   FileText,
@@ -13,7 +22,9 @@ import {
   MapPinned,
   Pencil,
   Plus,
+  Search,
   ShieldCheck,
+  SlidersHorizontal,
   Tag,
   Trash2,
   Wallet,
@@ -38,6 +49,196 @@ const emptyForm = {
   months: [],
   interest_ids: [],
 };
+
+// The list loads in small batches as the admin scrolls. The API accepts at
+// most 100 per request
+const BATCH_SIZE = 12;
+const LOAD_ALL_BATCH_SIZE = 100;
+
+// Field limits used by the browser validation in the form
+const LIMITS = {
+  name: { min: 2, max: 100 },
+  location: { min: 2, max: 100 },
+  category: { min: 2, max: 50 },
+  description: { min: 10, max: 1000 },
+  cost: { min: 0, max: 100000000 },
+  days: { min: 1, max: 365 },
+};
+
+const SORT_OPTIONS = [
+  { value: "default", label: "Default order" },
+  { value: "name-asc", label: "Name (A to Z)" },
+  { value: "name-desc", label: "Name (Z to A)" },
+  { value: "cost-asc", label: "Cost (low to high)" },
+  { value: "cost-desc", label: "Cost (high to low)" },
+  { value: "days-asc", label: "Duration (short to long)" },
+  { value: "days-desc", label: "Duration (long to short)" },
+];
+
+const SORTERS = {
+  "name-asc": (a, b) => a.name.localeCompare(b.name),
+  "name-desc": (a, b) => b.name.localeCompare(a.name),
+  "cost-asc": (a, b) => Number(a.estimated_cost) - Number(b.estimated_cost),
+  "cost-desc": (a, b) => Number(b.estimated_cost) - Number(a.estimated_cost),
+  "days-asc": (a, b) =>
+    Number(a.recommended_min_days) - Number(b.recommended_min_days),
+  "days-desc": (a, b) =>
+    Number(b.recommended_max_days) - Number(a.recommended_max_days),
+};
+
+function FilterSelect({ icon, label, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const wrapperRef = useRef(null);
+  const listRef = useRef(null);
+  const listId = useId();
+
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((option) => option.value === value)
+  );
+  const selected = options[selectedIndex];
+
+  const openList = () => {
+    setActiveIndex(selectedIndex);
+    setOpen(true);
+  };
+
+  const choose = (option) => {
+    onChange(option.value);
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    listRef.current
+      ?.querySelector(`[data-index="${activeIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
+
+  const handleKeyDown = (event) => {
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        openList();
+      }
+
+      return;
+    }
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setActiveIndex((index) => Math.min(index + 1, options.length - 1));
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        setActiveIndex((index) => Math.max(index - 1, 0));
+        break;
+      case "Home":
+        event.preventDefault();
+        setActiveIndex(0);
+        break;
+      case "End":
+        event.preventDefault();
+        setActiveIndex(options.length - 1);
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        choose(options[activeIndex]);
+        break;
+      case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(false);
+        break;
+      case "Tab":
+        setOpen(false);
+        break;
+      default:
+    }
+  };
+
+  return (
+    <div
+      className={`admin-filter${open ? " is-open" : ""}${
+        value !== options[0].value ? " has-value" : ""
+      }`}
+      ref={wrapperRef}
+    >
+      <button
+        type="button"
+        className="admin-filter-trigger"
+        onClick={() => (open ? setOpen(false) : openList())}
+        onKeyDown={handleKeyDown}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+      >
+        <span className="admin-filter-icon" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="admin-filter-value">{selected?.label}</span>
+        <ChevronDown
+          size={16}
+          className="admin-filter-chevron"
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <ul
+          className="admin-filter-list"
+          id={listId}
+          role="listbox"
+          aria-label={label}
+          ref={listRef}
+        >
+          {options.map((option, index) => (
+            <li
+              key={option.value}
+              data-index={index}
+              role="option"
+              aria-selected={option.value === value}
+              className={`admin-filter-option${
+                option.value === value ? " is-selected" : ""
+              }${index === activeIndex ? " is-active" : ""}`}
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => choose(option)}
+            >
+              <span>{option.label}</span>
+              {option.value === value && (
+                <Check size={15} aria-hidden="true" />
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function ConfirmDialog({
   icon,
@@ -119,6 +320,21 @@ function AdminHome() {
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingAll, setLoadingAll] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
+
+  const [total, setTotal] = useState(0);
+  const [pagedCount, setPagedCount] = useState(0);
+  const totalRef = useRef(0);
+  const pagedCountRef = useRef(0);
+  const busyRef = useRef(false);
+  const sentinelRef = useRef(null);
+
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sortBy, setSortBy] = useState("default");
+  const deferredSearch = useDeferredValue(search);
   const [submitting, setSubmitting] = useState(false);
 
   const [error, setError] = useState("");
@@ -205,24 +421,110 @@ function AdminHome() {
       .join(", ");
   };  
 
+  const updateTotal = (value) => {
+    totalRef.current = value;
+    setTotal(value);
+  };
+
+  const updatePaged = (value) => {
+    pagedCountRef.current = value;
+    setPagedCount(value);
+  };
+
+  const fetchBatch = async (size) => {
+    const page = Math.floor(pagedCountRef.current / size) + 1;
+    const response = await getDestinations(page, size);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch destinations");
+    }
+
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    updatePaged((page - 1) * size + items.length);
+
+    if (typeof data.total === "number") {
+      updateTotal(data.total);
+    } else if (items.length < size) {
+      updateTotal(pagedCountRef.current);
+    }
+
+    if (items.length === 0) {
+      updateTotal(pagedCountRef.current);
+    }
+
+    setDestinations((prev) => {
+      const seen = new Set(prev.map((item) => item.id));
+      const fresh = items.filter((item) => !seen.has(item.id));
+
+      return fresh.length > 0 ? [...prev, ...fresh] : prev;
+    });
+
+    return items.length;
+  };
+
   const fetchDestinations = async () => {
     try {
       setLoading(true);
       setError("");
+      setLoadMoreError("");
 
-      const response = await getDestinations(1, 100);
+      updatePaged(0);
+      updateTotal(0);
+      setDestinations([]);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch destinations");
-      }
-
-      const data = await response.json();
-
-      setDestinations(data.items);
+      await fetchBatch(BATCH_SIZE);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (busyRef.current) {
+      return;
+    }
+
+    busyRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreError("");
+
+    try {
+      await fetchBatch(BATCH_SIZE);
+    } catch {
+      setLoadMoreError("Couldn't load more destinations.");
+    } finally {
+      busyRef.current = false;
+      setLoadingMore(false);
+    }
+  };
+
+  const loadAll = async () => {
+    if (busyRef.current) {
+      return;
+    }
+
+    busyRef.current = true;
+    setLoadingMore(true);
+    setLoadingAll(true);
+    setLoadMoreError("");
+
+    try {
+      while (pagedCountRef.current < totalRef.current) {
+        const received = await fetchBatch(LOAD_ALL_BATCH_SIZE);
+
+        if (received === 0) {
+          break;
+        }
+      }
+    } catch {
+      setLoadMoreError("Couldn't load all destinations.");
+    } finally {
+      busyRef.current = false;
+      setLoadingMore(false);
+      setLoadingAll(false);
     }
   };
 
@@ -246,6 +548,134 @@ function AdminHome() {
     fetchDestinations();
     fetchInterests();
   }, []);
+
+  useEffect(() => {
+    const form = formRef.current?.querySelector("form");
+
+    if (!form) {
+      return;
+    }
+
+    ["name", "location", "category", "description"].forEach((field) => {
+      const value = formData[field];
+
+      form.elements[field].setCustomValidity(
+        value !== "" && value.trim() === ""
+          ? "This field can't contain only spaces."
+          : ""
+      );
+    });
+
+    const minDays = Number(formData.recommended_min_days);
+    const maxDays = Number(formData.recommended_max_days);
+
+    form.elements.recommended_max_days.setCustomValidity(
+      formData.recommended_min_days !== "" &&
+        formData.recommended_max_days !== "" &&
+        maxDays < minDays
+        ? "Maximum days can't be less than the minimum days."
+        : ""
+    );
+
+    const firstMonth = form.querySelector(".month-selector input");
+
+    if (firstMonth) {
+      firstMonth.setCustomValidity(
+        formData.months.length === 0
+          ? "Select at least one suitable month."
+          : ""
+      );
+    }
+
+    const firstInterest = form.querySelector(".interest-selector input");
+
+    if (firstInterest) {
+      firstInterest.setCustomValidity(
+        formData.interest_ids.length === 0
+          ? "Select at least one interest."
+          : ""
+      );
+    }
+  }, [formData, interests, showForm]);
+
+  const categories = useMemo(
+    () =>
+      [...new Set(destinations.map((item) => item.category).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [destinations]
+  );
+
+  const filteredDestinations = useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase();
+
+    let result = destinations.filter((item) => {
+      if (categoryFilter && item.category !== categoryFilter) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [item.name, item.location, item.category, item.description]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+
+    if (SORTERS[sortBy]) {
+      result = [...result].sort(SORTERS[sortBy]);
+    }
+
+    return result;
+  }, [destinations, deferredSearch, categoryFilter, sortBy]);
+
+  const visibleDestinations = filteredDestinations;
+  const hasMore = pagedCount < total;
+
+  const hasActiveFilters =
+    search.trim() !== "" || categoryFilter !== "" || sortBy !== "default";
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("");
+    setSortBy("default");
+  };
+
+  useEffect(() => {
+    if (categoryFilter && !categories.includes(categoryFilter)) {
+      setCategoryFilter("");
+    }
+  }, [categories, categoryFilter]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+
+    if (
+      !node ||
+      !hasMore ||
+      hasActiveFilters ||
+      loadMoreError ||
+      loading ||
+      loadingMore ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "400px 0px" }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [hasMore, hasActiveFilters, loadMoreError, loading, loadingMore, pagedCount]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -334,10 +764,10 @@ function AdminHome() {
       setFormError("");
 
       const destinationData = {
-        name: formData.name,
-        description: formData.description,
-        location: formData.location,
-        category: formData.category,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        location: formData.location.trim(),
+        category: formData.category.trim(),
         estimated_cost: formData.estimated_cost,
         recommended_min_days: Number(formData.recommended_min_days),
         recommended_max_days: Number(formData.recommended_max_days),
@@ -359,8 +789,26 @@ function AdminHome() {
         );
       }
 
+      const wasEditing = Boolean(editingId);
+      const saved = await response.json().catch(() => null);
+
       closeForm();
-      await fetchDestinations();
+
+      if (saved && saved.id !== undefined) {
+        if (wasEditing) {
+          setDestinations((prev) =>
+            prev.map((item) => (item.id === saved.id ? saved : item))
+          );
+        } else {
+          setDestinations((prev) => [
+            saved,
+            ...prev.filter((item) => item.id !== saved.id),
+          ]);
+          updateTotal(totalRef.current + 1);
+        }
+      } else {
+        await fetchDestinations();
+      }
     } catch (err) {
       setFormError(err.message);
     } finally {
@@ -379,8 +827,12 @@ function AdminHome() {
 
         throw new Error(data.detail || "Failed to delete destination");
       }
-
-      await fetchDestinations();
+      
+      setDestinations((prev) =>
+        prev.filter((item) => item.id !== destination.id)
+      );
+      updateTotal(Math.max(0, totalRef.current - 1));
+      updatePaged(Math.max(0, pagedCountRef.current - 1));
     } catch (err) {
       setError(err.message);
     }
@@ -436,8 +888,8 @@ function AdminHome() {
       <main className="admin-home-content">
         <div className="admin-destination-count">
           <MapPinned size={15} aria-hidden="true" />
-          <strong>{destinations.length}</strong>{" "}
-          {destinations.length === 1 ? "destination" : "destinations"}
+          <strong>{total.toLocaleString()}</strong>{" "}
+          {total === 1 ? "destination" : "destinations"}
         </div>
 
         {showForm && (
@@ -481,6 +933,9 @@ function AdminHome() {
                     onChange={handleInputChange}
                     placeholder="e.g. Munnar"
                     required
+                    minLength={LIMITS.name.min}
+                    maxLength={LIMITS.name.max}
+                    autoComplete="off"
                   />
                 </div>
 
@@ -498,6 +953,9 @@ function AdminHome() {
                     onChange={handleInputChange}
                     placeholder="e.g. Kerala"
                     required
+                    minLength={LIMITS.location.min}
+                    maxLength={LIMITS.location.max}
+                    autoComplete="off"
                   />
                 </div>
 
@@ -515,6 +973,9 @@ function AdminHome() {
                     onChange={handleInputChange}
                     placeholder="e.g. Hill Station"
                     required
+                    minLength={LIMITS.category.min}
+                    maxLength={LIMITS.category.max}
+                    autoComplete="off"
                   />
                 </div>
 
@@ -528,8 +989,10 @@ function AdminHome() {
                     id="estimated_cost"
                     name="estimated_cost"
                     type="number"
-                    min="0"
+                    min={LIMITS.cost.min}
+                    max={LIMITS.cost.max}
                     step="0.01"
+                    inputMode="decimal"
                     value={formData.estimated_cost}
                     onChange={handleInputChange}
                     placeholder="e.g. 15000"
@@ -547,7 +1010,10 @@ function AdminHome() {
                     id="recommended_min_days"
                     name="recommended_min_days"
                     type="number"
-                    min="1"
+                    min={LIMITS.days.min}
+                    max={LIMITS.days.max}
+                    step="1"
+                    inputMode="numeric"
                     value={formData.recommended_min_days}
                     onChange={handleInputChange}
                     placeholder="e.g. 2"
@@ -565,7 +1031,10 @@ function AdminHome() {
                     id="recommended_max_days"
                     name="recommended_max_days"
                     type="number"
-                    min="1"
+                    min={formData.recommended_min_days || LIMITS.days.min}
+                    max={LIMITS.days.max}
+                    step="1"
+                    inputMode="numeric"
                     value={formData.recommended_max_days}
                     onChange={handleInputChange}
                     placeholder="e.g. 5"
@@ -577,6 +1046,7 @@ function AdminHome() {
                   <label>
                     <CalendarDays size={15} aria-hidden="true" />
                     Suitable Months
+                    <span className="admin-field-hint">Select at least one</span>
                   </label>
 
                   <div className="month-selector">
@@ -599,6 +1069,7 @@ function AdminHome() {
                   <label>
                     <Heart size={15} aria-hidden="true" />
                     Interests
+                    <span className="admin-field-hint">Select at least one</span>
                   </label>
 
                   <div className="interest-selector">
@@ -633,7 +1104,13 @@ function AdminHome() {
                     placeholder="Describe the destination..."
                     rows="5"
                     required
+                    minLength={LIMITS.description.min}
+                    maxLength={LIMITS.description.max}
                   />
+
+                  <span className="admin-char-count" aria-hidden="true">
+                    {formData.description.length}/{LIMITS.description.max}
+                  </span>
                 </div>
               </div>
 
@@ -683,10 +1160,153 @@ function AdminHome() {
           </div>
         )}
 
+        {!loading && !error && destinations.length > 0 && (
+          <div className="admin-toolbar">
+            <div className="admin-search">
+              <Search size={17} aria-hidden="true" />
+
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name, location, category or description"
+                aria-label="Search destinations"
+                maxLength={100}
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  className="admin-search-clear"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            <FilterSelect
+              icon={<SlidersHorizontal size={15} />}
+              label="Filter by category"
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={[
+                { value: "", label: "All categories" },
+                ...categories.map((category) => ({
+                  value: category,
+                  label: category,
+                })),
+              ]}
+            />
+
+            <FilterSelect
+              icon={<ArrowUpDown size={15} />}
+              label="Sort destinations"
+              value={sortBy}
+              onChange={setSortBy}
+              options={SORT_OPTIONS}
+            />
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="admin-toolbar-reset"
+                onClick={clearFilters}
+              >
+                <X size={14} aria-hidden="true" />
+                Reset
+              </button>
+            )}
+          </div>
+        )}
+
+        {!loading && !error && destinations.length > 0 && (
+          <div className="admin-results-summary" role="status">
+            {hasActiveFilters ? (
+              <>
+                <span>
+                  {filteredDestinations.length.toLocaleString()}{" "}
+                  {filteredDestinations.length === 1 ? "match" : "matches"}
+                  {hasMore
+                    ? ` among the ${destinations.length.toLocaleString()} destinations loaded so far (of ${total.toLocaleString()})`
+                    : ` among all ${total.toLocaleString()} destinations`}
+                </span>
+
+                {hasMore && (
+                  <button
+                    type="button"
+                    className="admin-secondary-button admin-load-all-button"
+                    onClick={loadAll}
+                    disabled={loadingAll}
+                  >
+                    {loadingAll
+                      ? `Loading ${pagedCount.toLocaleString()} of ${total.toLocaleString()}...`
+                      : "Load all to search everything"}
+                  </button>
+                )}
+              </>
+            ) : (
+              <span>
+                {hasMore
+                  ? `Showing ${destinations.length.toLocaleString()} of ${total.toLocaleString()} destinations`
+                  : `Showing all ${total.toLocaleString()} ${
+                      total === 1 ? "destination" : "destinations"
+                    }`}
+              </span>
+            )}
+          </div>
+        )}
+
         {!loading && !error && (
           <section className="admin-destination-list">
-            {destinations.length > 0 ? (
-              destinations.map((destination) => (
+            {destinations.length === 0 ? (
+              <div className="admin-message">
+                <p>No destinations found.</p>
+
+                <button
+                  type="button"
+                  className="admin-add-button"
+                  onClick={openAddForm}
+                >
+                  <Plus size={17} aria-hidden="true" />
+                  Add your first destination
+                </button>
+              </div>
+            ) : filteredDestinations.length === 0 ? (
+              <div className="admin-message">
+                <p>
+                  {hasMore
+                    ? "No matches in the destinations loaded so far."
+                    : "No destinations match your search or filters."}
+                </p>
+
+                <div className="admin-message-actions">
+                  <button
+                    type="button"
+                    className="admin-secondary-button"
+                    onClick={clearFilters}
+                  >
+                    <X size={15} aria-hidden="true" />
+                    Reset search and filters
+                  </button>
+
+                  {hasMore && (
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={loadAll}
+                      disabled={loadingAll}
+                    >
+                      {loadingAll
+                        ? `Loading ${pagedCount.toLocaleString()} of ${total.toLocaleString()}...`
+                        : "Load all to search everything"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              visibleDestinations.map((destination) => (
                 <article
                   className="admin-destination-card"
                   key={destination.id}
@@ -789,21 +1409,41 @@ function AdminHome() {
                   </div>
                 </article>
               ))
-            ) : (
-              <div className="admin-message">
-                <p>No destinations found.</p>
-
-                <button
-          type="button"
-          className="admin-add-button"
-          onClick={openAddForm}
-        >
-          <Plus size={17} aria-hidden="true" />
-          Add your first destination
-                </button>
-              </div>
             )}
           </section>
+        )}
+
+        {!loading && !error && destinations.length > 0 && (
+          <div className="admin-load-footer" ref={sentinelRef}>
+            {loadMoreError ? (
+              <>
+                <span>{loadMoreError}</span>
+
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={loadMore}
+                >
+                  Try again
+                </button>
+              </>
+            ) : loadingMore && !loadingAll ? (
+              <span className="admin-load-status">
+                <span className="admin-spinner" aria-hidden="true" />
+                Loading more...
+              </span>
+            ) : hasMore && !hasActiveFilters ? (
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={loadMore}
+              >
+                Load more
+              </button>
+            ) : !hasMore && !hasActiveFilters ? (
+              <span>You've reached the end.</span>
+            ) : null}
+          </div>
         )}
       </main>
     
