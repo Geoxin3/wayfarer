@@ -42,7 +42,7 @@ function AdminLogin() {
     setErrors({});
 
     if (username === "admin" && password === "123") {
-      navigate("/admin/home");
+      navigate("/admin/home", {replace: true});
       return;
     }
 

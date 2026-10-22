@@ -225,40 +225,41 @@
 }
 
 
-/* Allow the logout button to position itself relative to Home */
 .home-page {
   position: relative;
 }
 
-/* Logout button - top-right corner */
 .logout-button {
   position: absolute;
   top: 20px;
   right: 24px;
   z-index: 10;
 
-  padding: 9px 18px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
-  background: transparent;
-  color: inherit;
+  padding: 9px 16px;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #333333;
 
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
-
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+
   transition:
     background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .logout-button:hover {
+  border-color: #dc2626;
   background: #dc2626;
   color: #ffffff;
-  border-color: #dc2626;
 }
 
 .logout-button:focus-visible {
@@ -285,99 +286,104 @@
   width: 100%;
   max-width: 420px;
   box-sizing: border-box;
-  padding: 32px;
+  padding: 34px 32px 30px;
 
   background: #ffffff;
-  color: #1f2937;
-
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-
+  border: 1px solid #eeeef2;
+  border-radius: 18px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 
-  line-height: 1.7;
+  text-align: center;
+}
+
+.logout-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 .logout-modal h2 {
-  margin: 0 0 16px;
-  color: #111827;
-  font-size: 1.5rem;
-  line-height: 1.35;
+  margin: 0 0 10px;
+  color: #111111;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.25;
 }
 
 .logout-modal p {
   margin: 0;
-  color: #6b7280;
-  font-size: 1rem;
-  line-height: 1.8;
+  color: #666666;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 /* Dialog action buttons */
 .logout-modal-actions {
   display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 12px;
-
   margin-top: 28px;
 }
 
 .logout-modal-actions button {
-  padding: 11px 18px;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 13px 16px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
 
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.4;
-
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
+
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
-    color 0.2s ease;
+    box-shadow 0.2s ease;
 }
 
 /* Cancel - neutral */
-.logout-cancel-button {
-  border-color: #d1d5db;
+.logout-modal-actions .logout-cancel-button {
+  border-color: #dddddd;
   background: #ffffff;
-  color: #374151;
+  color: #333333;
 }
 
 .logout-cancel-button:hover {
-  background: #f3f4f6;
   border-color: #9ca3af;
+  background: #f3f4f6;
 }
 
 /* Confirm logout - red */
-.logout-confirm-button {
-  background: #dc2626;
+.logout-modal-actions .logout-confirm-button {
   border-color: #dc2626;
+  background: #dc2626;
   color: #ffffff;
 }
 
 .logout-confirm-button:hover {
-  background: #b91c1c;
   border-color: #b91c1c;
+  background: #b91c1c;
+  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.2);
 }
 
 .logout-modal-actions button:focus-visible {
   outline: 3px solid rgba(220, 38, 38, 0.3);
   outline-offset: 3px;
-}
-
-.logout-modal h2 {
-  font-size: 1.3rem;
-}
-
-.logout-modal p {
-  font-size: 0.9rem;
-}
-
-.logout-modal-actions button {
-  font-size: 0.875rem;
 }
 
 /* Icons (lucide-react) */
@@ -400,19 +406,6 @@
 .home-page .plan-trip-button:hover svg:last-child,
 .home-page .view-all a:hover svg:last-child {
     transform: translateX(3px);
-}
-
-.logout-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.logout-modal-actions button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
 }
 
 .home-page .destination-location {
@@ -552,25 +545,32 @@
 
 /* Keep the dialog comfortable on small screens */
 @media (max-width: 480px) {
-        .logout-button {
-            top: 12px;
-            right: 12px;
-            padding: 8px 12px;
-        }
-
-        .logout-modal {
-            padding: 24px;
-            border-radius: 14px;
-        }
-
-        .logout-modal-actions {
-            gap: 10px;
-        }
+    .logout-button {
+        top: 12px;
+        right: 12px;
+        padding: 8px 12px;
     }
+
+    .logout-modal {
+        padding: 28px 22px 24px;
+        border-radius: 16px;
+    }
+
+    .logout-modal-actions {
+        flex-direction: column-reverse;
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .home-page .plan-trip-button:hover svg:last-child,
     .home-page .view-all a:hover svg:last-child {
         transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logout-button,
+    .logout-modal-actions button {
+        transition: none;
     }
 }

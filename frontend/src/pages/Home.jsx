@@ -28,6 +28,22 @@ function Home() {
   };
 
   useEffect(() => {
+    if (!showLogoutConfirm) {
+      return;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowLogoutConfirm(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showLogoutConfirm]);
+
+  useEffect(() => {
     getDestinations(1, 6)
       .then((response) => {
         if (!response.ok) {
@@ -160,6 +176,10 @@ function Home() {
             aria-labelledby="logout-title"
             aria-describedby="logout-description"
           >
+            <div className="logout-modal-icon" aria-hidden="true">
+              <LogOut size={24} />
+            </div>
+
             <h2 id="logout-title">Log out?</h2>
 
             <p id="logout-description">
@@ -171,6 +191,7 @@ function Home() {
                 type="button"
                 className="logout-cancel-button"
                 onClick={() => setShowLogoutConfirm(false)}
+                autoFocus
               >
                 <X size={16} aria-hidden="true" />
                 Cancel

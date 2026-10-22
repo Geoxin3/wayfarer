@@ -1,5 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./styles/AdminHome.css";
+import {
+  CalendarDays,
+  Check,
+  Clock,
+  Compass,
+  FileText,
+  Heart,
+  LogOut,
+  MapPin,
+  MapPinned,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Tag,
+  Trash2,
+  Wallet,
+  X,
+} from "lucide-react";
 import {
   getDestinations,
   getInterests,
@@ -20,6 +39,77 @@ const emptyForm = {
   interest_ids: [],
 };
 
+function ConfirmDialog({
+  icon,
+  tone = "default",
+  title,
+  description,
+  confirmLabel,
+  confirmIcon,
+  busy = false,
+  onCancel,
+  onConfirm,
+}) {
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !busy) {
+        onCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [busy, onCancel]);
+
+  return (
+    <div className="admin-dialog-overlay">
+      <div
+        className="admin-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="admin-dialog-title"
+        aria-describedby="admin-dialog-description"
+      >
+        <div
+          className={`admin-dialog-icon admin-dialog-icon-${tone}`}
+          aria-hidden="true"
+        >
+          {icon}
+        </div>
+
+        <h2 id="admin-dialog-title">{title}</h2>
+
+        <p id="admin-dialog-description">{description}</p>
+
+        <div className="admin-dialog-actions">
+          <button
+            type="button"
+            className="admin-dialog-cancel"
+            onClick={onCancel}
+            disabled={busy}
+            autoFocus
+          >
+            <X size={16} aria-hidden="true" />
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className={`admin-dialog-confirm admin-dialog-confirm-${tone}`}
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {confirmIcon}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminHome() {
   const [destinations, setDestinations] = useState([]);
   const [interests, setInterests] = useState([]);
@@ -34,6 +124,20 @@ function AdminHome() {
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const formRef = useRef(null);
+
+  const navigate = useNavigate();
+
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleLogout = () => {
+    navigate("/admin", { replace: true });
+  };
+
+  const openDestination = (destinationId) => {
+    navigate(`/destinations/${destinationId}`);
+  };
 
   const months = [
     { value: 1, name: "January" },
@@ -265,14 +369,6 @@ function AdminHome() {
   };
 
   const handleDelete = async (destination) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${destination.name}"?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       setError("");
 
@@ -290,11 +386,34 @@ function AdminHome() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    await handleDelete(deleteTarget);
+    setDeleting(false);
+    setDeleteTarget(null);
+  };
+
   return (
     <div className="admin-home">
+      <button
+        type="button"
+        className="admin-logout-button"
+        onClick={() => setShowLogoutConfirm(true)}
+      >
+        <LogOut size={16} aria-hidden="true" />
+        Logout
+      </button>
+
       <header className="admin-home-header">
         <div>
-          <span className="admin-home-eyebrow">WAYFARER ADMIN</span>
+          <span className="admin-home-eyebrow">
+            <ShieldCheck size={14} aria-hidden="true" />
+            WAYFARER ADMIN
+          </span>
 
           <h1>Destination Management</h1>
 
@@ -303,18 +422,20 @@ function AdminHome() {
           </p>
         </div>
 
-        <div></div>
 
         <button
+          type="button"
           className="admin-add-button"
           onClick={openAddForm}
         >
-          + Add Destination
+          <Plus size={17} aria-hidden="true" />
+          Add Destination
         </button>
       </header>
 
       <main className="admin-home-content">
         <div className="admin-destination-count">
+          <MapPinned size={15} aria-hidden="true" />
           <strong>{destinations.length}</strong>{" "}
           {destinations.length === 1 ? "destination" : "destinations"}
         </div>
@@ -338,15 +459,19 @@ function AdminHome() {
                 className="admin-close-button"
                 onClick={closeForm}
                 type="button"
+                aria-label="Close form"
               >
-                ×
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="admin-form-grid">
                 <div className="admin-form-field">
-                  <label htmlFor="name">Name</label>
+                  <label htmlFor="name">
+                    <Compass size={15} aria-hidden="true" />
+                    Name
+                  </label>
 
                   <input
                     id="name"
@@ -360,7 +485,10 @@ function AdminHome() {
                 </div>
 
                 <div className="admin-form-field">
-                  <label htmlFor="location">Location</label>
+                  <label htmlFor="location">
+                    <MapPin size={15} aria-hidden="true" />
+                    Location
+                  </label>
 
                   <input
                     id="location"
@@ -374,7 +502,10 @@ function AdminHome() {
                 </div>
 
                 <div className="admin-form-field">
-                  <label htmlFor="category">Category</label>
+                  <label htmlFor="category">
+                    <Tag size={15} aria-hidden="true" />
+                    Category
+                  </label>
 
                   <input
                     id="category"
@@ -389,6 +520,7 @@ function AdminHome() {
 
                 <div className="admin-form-field">
                   <label htmlFor="estimated_cost">
+                    <Wallet size={15} aria-hidden="true" />
                     Estimated Cost
                   </label>
 
@@ -407,6 +539,7 @@ function AdminHome() {
 
                 <div className="admin-form-field">
                   <label htmlFor="recommended_min_days">
+                    <Clock size={15} aria-hidden="true" />
                     Minimum Trip Days
                   </label>
 
@@ -424,6 +557,7 @@ function AdminHome() {
 
                 <div className="admin-form-field">
                   <label htmlFor="recommended_max_days">
+                    <Clock size={15} aria-hidden="true" />
                     Maximum Trip Days
                   </label>
 
@@ -440,7 +574,10 @@ function AdminHome() {
                 </div>
 
                 <div className="admin-form-field-full">
-                  <label>Suitable Months</label>
+                  <label>
+                    <CalendarDays size={15} aria-hidden="true" />
+                    Suitable Months
+                  </label>
 
                   <div className="month-selector">
                     {months.map((month) => (
@@ -458,29 +595,35 @@ function AdminHome() {
                   </div>
                 </div>
 
-<div className="admin-form-field admin-form-field-full">
-  <label>Interests</label>
+                <div className="admin-form-field admin-form-field-full">
+                  <label>
+                    <Heart size={15} aria-hidden="true" />
+                    Interests
+                  </label>
 
-  <div className="interest-selector">
-    {interests.map((interest) => (
-      <label
-        className="interest-option"
-        key={interest.id}
-      >
-        <input
-          type="checkbox"
-          checked={formData.interest_ids.includes(interest.id)}
-          onChange={() => handleInterestChange(interest.id)}
-        />
+                  <div className="interest-selector">
+                    {interests.map((interest) => (
+                      <label
+                        className="interest-option"
+                        key={interest.id}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.interest_ids.includes(interest.id)}
+                          onChange={() => handleInterestChange(interest.id)}
+                        />
 
-        <span>{interest.name}</span>
-      </label>
-    ))}
-  </div>
-</div>
+                        <span>{interest.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="admin-form-field admin-form-field-full">
-                  <label htmlFor="description">Description</label>
+                  <label htmlFor="description">
+                    <FileText size={15} aria-hidden="true" />
+                    Description
+                  </label>
 
                   <textarea
                     id="description"
@@ -507,6 +650,7 @@ function AdminHome() {
                   onClick={closeForm}
                   disabled={submitting}
                 >
+                  <X size={16} aria-hidden="true" />
                   Cancel
                 </button>
 
@@ -515,6 +659,7 @@ function AdminHome() {
                   className="admin-save-button"
                   disabled={submitting}
                 >
+                  {!submitting && <Check size={16} aria-hidden="true" />}
                   {submitting
                     ? "Saving..."
                     : editingId
@@ -545,7 +690,26 @@ function AdminHome() {
                 <article
                   className="admin-destination-card"
                   key={destination.id}
+                  onClick={() => openDestination(destination.id)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) {
+                      return;
+                    }
+
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openDestination(destination.id);
+                    }
+                  }}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`View ${destination.name}`}
                 >
+                  <div
+                    className="admin-destination-image-container"
+                    aria-label={`Image area for ${destination.name}`}
+                  />
+
                   <div className="admin-destination-main">
                     <div className="admin-destination-top">
                       <span className="admin-destination-category">
@@ -553,7 +717,8 @@ function AdminHome() {
                       </span>
 
                       <span className="admin-destination-location">
-                        📍 {destination.location}
+                        <MapPin size={14} aria-hidden="true" />
+                        <span>{destination.location}</span>
                       </span>
                     </div>
 
@@ -565,16 +730,33 @@ function AdminHome() {
 
                     <div className="admin-destination-details">
                       <div>
-                        <span>Estimated cost</span>
+                        <span>
+                          <Wallet size={13} aria-hidden="true" />
+                          Estimated cost
+                        </span>
                         <strong>
                           ₹{destination.estimated_cost}
                         </strong>
                       </div>
 
                       <div>
-                        <span>Best time</span>
+                        <span>
+                          <CalendarDays size={13} aria-hidden="true" />
+                          Best time
+                        </span>
                         <strong>
                           {destination.best_time_to_visit}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          <Clock size={13} aria-hidden="true" />
+                          Duration
+                        </span>
+                        <strong>
+                          {destination.recommended_min_days} -{" "}
+                          {destination.recommended_max_days} days
                         </strong>
                       </div>
                     </div>
@@ -582,16 +764,26 @@ function AdminHome() {
 
                   <div className="admin-destination-actions">
                     <button
+                      type="button"
                       className="admin-edit-button"
-                      onClick={() => openEditForm(destination)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEditForm(destination);
+                      }}
                     >
+                      <Pencil size={15} aria-hidden="true" />
                       Edit
                     </button>
 
                     <button
+                      type="button"
                       className="admin-delete-button"
-                      onClick={() => handleDelete(destination)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeleteTarget(destination);
+                      }}
                     >
+                      <Trash2 size={15} aria-hidden="true" />
                       Delete
                     </button>
                   </div>
@@ -602,16 +794,44 @@ function AdminHome() {
                 <p>No destinations found.</p>
 
                 <button
-                  className="admin-add-button"
-                  onClick={openAddForm}
-                >
-                  + Add your first destination
+          type="button"
+          className="admin-add-button"
+          onClick={openAddForm}
+        >
+          <Plus size={17} aria-hidden="true" />
+          Add your first destination
                 </button>
               </div>
             )}
           </section>
         )}
       </main>
+    
+      {showLogoutConfirm && (
+        <ConfirmDialog
+          icon={<LogOut size={24} />}
+          title="Log out?"
+          description="Are you sure you want to log out of the Wayfarer admin panel?"
+          confirmLabel="Yes, Logout"
+          confirmIcon={<LogOut size={16} aria-hidden="true" />}
+          onCancel={() => setShowLogoutConfirm(false)}
+          onConfirm={handleLogout}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          tone="danger"
+          icon={<Trash2 size={24} />}
+          title="Delete destination?"
+          description={`Are you sure you want to delete “${deleteTarget.name}”? This action can't be undone.`}
+          confirmLabel={deleting ? "Deleting..." : "Yes, Delete"}
+          confirmIcon={!deleting && <Trash2 size={16} aria-hidden="true" />}
+          busy={deleting}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }
