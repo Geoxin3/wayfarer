@@ -4,6 +4,7 @@ from app.models.destination import Destination
 from app.models.destination_month import DestinationMonth
 from app.models.destination_interest import DestinationInterest
 from app.models.interest import Interest
+from app.models.destination_image import DestinationImage
 from app.schemas.destination import DestinationCreate, DestinationUpdate
 
 # helper destination response
@@ -14,6 +15,11 @@ def build_destination_response(db: Session, destination: Destination) -> dict:
 
     interest_ids = db.scalars(select(DestinationInterest.interest_id)
         .where(DestinationInterest.destination_id == destination.id)
+    ).all()
+
+    image_paths = db.scalars(select(DestinationImage.image_path)
+        .where(DestinationImage.destination_id == destination.id)
+        .order_by(DestinationImage.id)
     ).all()
 
     return {
@@ -28,6 +34,7 @@ def build_destination_response(db: Session, destination: Destination) -> dict:
         "best_time_to_visit": destination.best_time_to_visit,
         "months": list(months),
         "interest_ids": list(interest_ids),
+        "images": list(image_paths)
     }
 
 def get_destination_model(db: Session, destination_id: int):
