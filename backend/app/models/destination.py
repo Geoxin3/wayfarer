@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from sqlalchemy import Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Numeric, String, Text, UniqueConstraint
 
@@ -65,4 +64,9 @@ class Destination(Base):
         secondary="trip_destinations",
         back_populates="destinations",
         viewonly=True
+    )
+
+    images: Mapped[list["DestinationImage"]] = relationship(
+        back_populates="destination",
+        cascade="all, delete-orphan",
     )

@@ -41,6 +41,8 @@ class DestinationResponse(BaseModel):
     months: list[int]
     interest_ids: list[int]
 
+    image_path: list[str] = []
+
     model_config = ConfigDict(from_attributes=True)
 
 class DestinationListResponse(BaseModel):

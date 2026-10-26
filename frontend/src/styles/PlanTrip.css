@@ -55,14 +55,14 @@
   box-shadow: 0 5px 18px rgba(15, 23, 42, 0.04);
 }
 
-.section-heading {
+.plan-trip-page .section-heading {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 32px;
 }
 
-.section-heading > span {
+.plan-trip-page .section-heading > span {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +80,7 @@
   font-weight: 800;
 }
 
-.section-heading h2 {
+.plan-trip-page .section-heading h2 {
   margin: 0 0 5px;
   font-size: 22px;
   font-weight: 750;
@@ -88,7 +88,7 @@
   color: #111827;
 }
 
-.section-heading p {
+.plan-trip-page .section-heading p {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
@@ -239,6 +239,36 @@
   cursor: not-allowed;
 }
 
+/* Icons (lucide-react) */
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.form-group label svg {
+  flex-shrink: 0;
+  color: #4f46e5;
+}
+
+.cancel-trip-button,
+.create-trip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.create-trip-button svg {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.create-trip-button:hover:not(:disabled) svg {
+  transform: translateX(3px);
+}
+
 /* Mobile */
 
 @media (max-width: 640px) {
@@ -258,12 +288,12 @@
     padding: 24px;
   }
 
-  .section-heading {
+  .plan-trip-page .section-heading {
     gap: 12px;
     margin-bottom: 26px;
   }
 
-  .section-heading h2 {
+  .plan-trip-page .section-heading h2 {
     font-size: 20px;
   }
 
@@ -279,5 +309,11 @@
   .cancel-trip-button,
   .create-trip-button {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-trip-button:hover:not(:disabled) svg {
+    transform: none;
   }
 }

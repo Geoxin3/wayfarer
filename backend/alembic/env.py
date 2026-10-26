@@ -13,6 +13,7 @@ from app.models.trip_destination import TripDestination
 from app.models.destination_month import DestinationMonth
 from app.models.interest import Interest
 from app.models.destination_interest import DestinationInterest
+from app.models.destination_image import DestinationImage
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

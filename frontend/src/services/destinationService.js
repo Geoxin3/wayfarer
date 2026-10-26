@@ -31,3 +31,50 @@ export async function deleteDestination(id) {
         method: "DELETE",
     });
 }
+
+// images api
+export async function getDestinationImages(destinationId) {
+    return apiRequest(`/destinations/${destinationId}/images`);
+}
+
+export async function uploadDestinationImages(destinationId, files) {
+    const formData = new FormData();
+
+    for (const file of files) {
+        formData.append("files", file);
+    }
+
+    return apiRequest(`/destinations/${destinationId}/images`, {
+        method: "POST",
+        body: formData,
+    });
+}
+
+export async function updateDestinationImage(
+    destinationId,
+    imageId,
+    file
+) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return apiRequest(
+        `/destinations/${destinationId}/images/${imageId}`,
+        {
+            method: "PUT",
+            body: formData,
+        }
+    );
+}
+
+export async function deleteDestinationImage(
+    destinationId,
+    imageId
+) {
+    return apiRequest(
+        `/destinations/${destinationId}/images/${imageId}`,
+        {
+            method: "DELETE",
+        }
+    );
+}
