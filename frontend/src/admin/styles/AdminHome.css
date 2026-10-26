@@ -1375,6 +1375,308 @@
   cursor: not-allowed;
 }
 
+/* Photos: card cover */
+
+.admin-home .admin-destination-image-container {
+  position: relative;
+}
+
+.admin-destination-image-container::before,
+.admin-photo-tile::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  z-index: 0;
+  background: var(--photo) center / cover no-repeat;
+  filter: blur(18px) saturate(1.15);
+  opacity: 0.6;
+}
+
+.admin-destination-image-container img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cfc6f3;
+}
+
+.admin-image-count {
+  z-index: 2;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+
+  border-radius: 999px;
+  background: rgba(24, 16, 52, 0.72);
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-home .admin-file-input,
+.admin-home .admin-form-field .admin-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.admin-photos {
+  position: relative;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #eeeef2;
+}
+
+.admin-photo-add-item {
+  aspect-ratio: 4 / 3;
+  list-style: none;
+}
+
+.admin-photo-add-item.is-empty {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  min-height: 150px;
+}
+
+.admin-photo-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+
+  border: 1.5px dashed #cfc6f3;
+  border-radius: 12px;
+  background: #faf8ff;
+  color: #6c4ce8;
+  text-align: center;
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.admin-photo-add:hover,
+.admin-photos.is-dragging .admin-photo-add,
+.admin-photos:has(.admin-photos-input:focus-visible) .admin-photo-add {
+  border-color: #6c4ce8;
+  background: #f5f1ff;
+}
+
+.admin-photos.is-dragging .admin-photo-add {
+  box-shadow: 0 0 0 4px rgba(108, 76, 232, 0.12);
+}
+
+.admin-photo-add.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-photo-add-title {
+  color: #333333;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-photo-add-hint {
+  color: #888888;
+  font-size: 12px;
+}
+
+.admin-photo-notice {
+  margin: 0;
+  padding: 10px 12px;
+
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-photo-status {
+  margin: 0;
+  color: #888888;
+  font-size: 13px;
+}
+
+.admin-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-photo-tile {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+
+  border: 1px solid #e8e3ee;
+  border-radius: 12px;
+  background: #f0eefb;
+}
+
+.admin-photo-tile img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-photo-tile.is-removed img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.admin-photo-tile.is-replaced {
+  border-color: #6c4ce8;
+}
+
+.admin-photo-badge {
+  z-index: 2;
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 3px 8px;
+
+  border-radius: 999px;
+  background: #6c4ce8;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-photo-actions {
+  z-index: 2;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.admin-photo-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #5938d4;
+  box-shadow: 0 2px 8px rgba(20, 10, 50, 0.18);
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.admin-photo-action:hover:not(:disabled) {
+  background: #f5f1ff;
+}
+
+.admin-photo-action-danger {
+  color: #dc2626;
+}
+
+.admin-photo-action-danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.admin-photo-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-photo-action:has(.admin-file-input:focus-visible),
+.admin-photo-action:focus-visible,
+.admin-photo-undo:focus-visible {
+  outline: 3px solid rgba(108, 76, 232, 0.4);
+  outline-offset: 2px;
+}
+
+.admin-photo-overlay {
+  z-index: 3;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  background: rgba(255, 255, 255, 0.6);
+  color: #444444;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-photo-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+
+  border: 1px solid #ddd6f5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5938d4;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-photo-undo:hover:not(:disabled) {
+  border-color: #6c4ce8;
+  background: #f5f1ff;
+}
+
+@media (max-width: 760px) {
+  .admin-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .admin-home {
     padding-top: 84px;

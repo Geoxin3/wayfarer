@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useId,
@@ -17,11 +18,15 @@ import {
   Compass,
   FileText,
   Heart,
+  Image as ImageIcon,
+  ImagePlus,
   LogOut,
   MapPin,
   MapPinned,
   Pencil,
   Plus,
+  RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -36,7 +41,12 @@ import {
   createDestination,
   updateDestination,
   deleteDestination,
+  getDestinationImages,
+  uploadDestinationImages,
+  updateDestinationImage,
+  deleteDestinationImage,
 } from "../services/destinationService";
+import { BASE_URL } from "../services/api";
 
 const emptyForm = {
   name: "",
@@ -51,11 +61,11 @@ const emptyForm = {
 };
 
 // The list loads in small batches as the admin scrolls. The API accepts at
-// most 100 per request
+// most 100 per request. "Load all" uses the biggest batch to finish quickly.
 const BATCH_SIZE = 12;
 const LOAD_ALL_BATCH_SIZE = 100;
 
-// Field limits used by the browser validation in the form
+// Field limits used by the browser validation in the form.
 const LIMITS = {
   name: { min: 2, max: 100 },
   location: { min: 2, max: 100 },
@@ -85,6 +95,398 @@ const SORTERS = {
   "days-desc": (a, b) =>
     Number(b.recommended_max_days) - Number(a.recommended_max_days),
 };
+
+// Photo rules: These mirror the backend: JPG / PNG / WebP, 5 MB each
+// MAX_IMAGES is only a limit for this form, the backend has none
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGES = 10;
+
+// The API stores a path like "uploads/destinations/destinationname/abc.jpg" and
+const getImageUrl = (path) => {
+    if (!path) return "";
+
+    if (/^(https?:|data:|blob:)/.test(path)) {
+        return path;
+    }
+
+    const cleanPath = String(path).replace(/^\/+/, "");
+
+    const uploadPath = cleanPath.startsWith("uploads/")
+        ? cleanPath
+        : `uploads/${cleanPath}`;
+
+    return `${BASE_URL}/${uploadPath}`;
+};
+
+
+const validateImageFile = (file) => {
+  if (!IMAGE_TYPES.includes(file.type)) {
+    return `${file.name}: only JPG, PNG or WebP images are allowed.`;
+  }
+
+  if (file.size === 0) {
+    return `${file.name}: the file is empty.`;
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    return `${file.name}: larger than 5 MB.`;
+  }
+
+  return "";
+};
+
+const photoBackdrop = (src) =>
+  src ? { "--photo": `url("${String(src).replace(/"/g, "%22")}")` } : undefined;
+
+const isSameFile = (a, b) =>
+  a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+
+function useObjectUrl(file) {
+  const [url, setUrl] = useState(null);
+
+  useEffect(() => {
+    if (!file) {
+      setUrl(null);
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  return url;
+}
+
+// Cover photo on a destination card. The photos are only requested once
+function CardImage({ destination, images, onNeedImages }) {
+  const containerRef = useRef(null);
+  const [broken, setBroken] = useState(false);
+  const cover = images?.[0];
+
+  useEffect(() => {
+    if (images !== undefined) {
+      return undefined;
+    }
+
+    const node = containerRef.current;
+
+    if (!node || typeof IntersectionObserver === "undefined") {
+      onNeedImages(destination.id);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          onNeedImages(destination.id);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [images, destination.id, onNeedImages]);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [cover?.image_path]);
+
+  return (
+    <div
+      className="admin-destination-image-container"
+      ref={containerRef}
+      style={cover && !broken ? photoBackdrop(getImageUrl(cover.image_path)) : undefined}
+    >
+      {cover && !broken ? (
+        <img
+          src={getImageUrl(cover.image_path)}
+          alt={destination.name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span className="admin-image-placeholder" aria-hidden="true">
+          <ImageIcon size={30} />
+        </span>
+      )}
+
+      {images?.length > 1 && (
+        <span
+          className="admin-image-count"
+          title={`${images.length} photos`}
+        >
+          <ImageIcon size={13} aria-hidden="true" />
+          {images.length}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ExistingPhotoTile({
+  image,
+  replacement,
+  removed,
+  disabled,
+  onRemove,
+  onUndoRemove,
+  onReplace,
+  onUndoReplace,
+}) {
+  const previewUrl = useObjectUrl(replacement);
+  const src = previewUrl || getImageUrl(image.image_path);
+
+  return (
+    <li
+      className={`admin-photo-tile${removed ? " is-removed" : ""}${
+        replacement ? " is-replaced" : ""
+      }`}
+      style={photoBackdrop(src)}
+    >
+      <img src={src} alt="" loading="lazy" />
+
+      {replacement && !removed && (
+        <span className="admin-photo-badge admin-photo-badge-replace">
+          Replacing
+        </span>
+      )}
+
+      {removed ? (
+        <div className="admin-photo-overlay">
+          <span>Will be removed</span>
+
+          <button
+            type="button"
+            className="admin-photo-undo"
+            onClick={onUndoRemove}
+            disabled={disabled}
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+            Undo
+          </button>
+        </div>
+      ) : (
+        <div className="admin-photo-actions">
+          {replacement ? (
+            <button
+              type="button"
+              className="admin-photo-action"
+              onClick={onUndoReplace}
+              disabled={disabled}
+              aria-label="Undo replacing this photo"
+              title="Undo replace"
+            >
+              <RotateCcw size={15} aria-hidden="true" />
+            </button>
+          ) : (
+            <label
+              className="admin-photo-action"
+              title="Replace this photo"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+
+              <input
+                type="file"
+                className="admin-file-input"
+                accept={IMAGE_TYPES.join(",")}
+                aria-label="Replace this photo"
+                disabled={disabled}
+                onChange={(event) => {
+                  onReplace(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          )}
+
+          <button
+            type="button"
+            className="admin-photo-action admin-photo-action-danger"
+            onClick={onRemove}
+            disabled={disabled}
+            aria-label="Remove this photo"
+            title="Remove this photo"
+          >
+            <Trash2 size={15} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function NewPhotoTile({ file, disabled, onRemove }) {
+  const previewUrl = useObjectUrl(file);
+
+  return (
+    <li className="admin-photo-tile" style={photoBackdrop(previewUrl)}>
+      {previewUrl && <img src={previewUrl} alt="" />}
+
+      <span className="admin-photo-badge">New</span>
+
+      <div className="admin-photo-actions">
+        <button
+          type="button"
+          className="admin-photo-action admin-photo-action-danger"
+          onClick={onRemove}
+          disabled={disabled}
+          aria-label={`Remove ${file.name}`}
+          title="Remove"
+        >
+          <X size={15} aria-hidden="true" />
+        </button>
+      </div>
+    </li>
+  );
+}
+
+// The photos part of the add / edit form nothing is sent to the server
+// from here: changes are staged and only applied when the form is saved
+function PhotoManager({
+  existing,
+  removedIds,
+  replacements,
+  newFiles,
+  loading,
+  loadError,
+  notice,
+  slotsLeft,
+  keptCount,
+  disabled,
+  onAddFiles,
+  onRemoveExisting,
+  onUndoRemove,
+  onReplace,
+  onUndoReplace,
+  onRemoveNew,
+}) {
+  const [dragging, setDragging] = useState(false);
+  const inputId = useId();
+  const hasTiles = existing.length > 0 || newFiles.length > 0;
+  const canAdd = slotsLeft > 0 && !disabled;
+
+  return (
+    <div
+      className={`admin-form-field admin-form-field-full admin-photos${
+        dragging ? " is-dragging" : ""
+      }`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setDragging(false);
+        }
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+
+        if (canAdd) {
+          onAddFiles(event.dataTransfer.files);
+        }
+      }}
+    >
+      <label htmlFor={inputId}>
+        <ImageIcon size={15} aria-hidden="true" />
+        Photos
+        <span className="admin-field-hint">
+          Optional · {keptCount + newFiles.length} of {MAX_IMAGES}
+        </span>
+      </label>
+
+      <input
+        id={inputId}
+        type="file"
+        className="admin-file-input admin-photos-input"
+        accept={IMAGE_TYPES.join(",")}
+        multiple
+        disabled={!canAdd}
+        onChange={(event) => {
+          onAddFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
+      {notice && (
+        <p className="admin-photo-notice" role="alert">
+          {notice}
+        </p>
+      )}
+
+      {loadError && (
+        <p className="admin-photo-notice" role="alert">
+          {loadError}
+        </p>
+      )}
+
+      <ul className="admin-photo-grid">
+        {existing.map((image) => (
+          <ExistingPhotoTile
+            key={image.id}
+            image={image}
+            replacement={replacements[image.id]}
+            removed={removedIds.includes(image.id)}
+            disabled={disabled}
+            onRemove={() => onRemoveExisting(image.id)}
+            onUndoRemove={() => onUndoRemove(image.id)}
+            onReplace={(files) => onReplace(image.id, files)}
+            onUndoReplace={() => onUndoReplace(image.id)}
+          />
+        ))}
+
+        {newFiles.map((item) => (
+          <NewPhotoTile
+            key={item.key}
+            file={item.file}
+            disabled={disabled}
+            onRemove={() => onRemoveNew(item.key)}
+          />
+        ))}
+
+        {slotsLeft > 0 && (
+          <li
+            className={`admin-photo-add-item${
+              hasTiles || loading ? "" : " is-empty"
+            }`}
+          >
+            <label
+              htmlFor={inputId}
+              className={`admin-photo-add${canAdd ? "" : " is-disabled"}`}
+            >
+              <Plus size={hasTiles ? 24 : 26} aria-hidden="true" />
+
+              <span className="admin-photo-add-title">
+                {hasTiles ? "Add more" : "Add photos"}
+              </span>
+
+              {!hasTiles && !loading && (
+                <span className="admin-photo-add-hint">
+                  Click or drop photos here
+                </span>
+              )}
+            </label>
+          </li>
+        )}
+      </ul>
+
+      {loading && (
+        <p className="admin-photo-status">Loading current photos...</p>
+      )}
+
+      <p className="admin-photo-status">
+        JPG, PNG or WebP · up to 5 MB each · you can add several at once
+      </p>
+    </div>
+  );
+}
 
 function FilterSelect({ icon, label, value, options, onChange }) {
   const [open, setOpen] = useState(false);
@@ -331,6 +733,18 @@ function AdminHome() {
   const busyRef = useRef(false);
   const sentinelRef = useRef(null);
 
+  const [imagesByDestination, setImagesByDestination] = useState({});
+  const imageRequestsRef = useRef(new Set());
+  const activeImageIdRef = useRef(null);
+  const fileKeyRef = useRef(0);
+  const [existingImages, setExistingImages] = useState([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [imagesError, setImagesError] = useState("");
+  const [removedImageIds, setRemovedImageIds] = useState([]);
+  const [replacements, setReplacements] = useState({});
+  const [newFiles, setNewFiles] = useState([]);
+  const [imageNotice, setImageNotice] = useState("");
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sortBy, setSortBy] = useState("default");
@@ -528,6 +942,236 @@ function AdminHome() {
     }
   };
 
+  const ensureImages = useCallback(async (destinationId) => {
+    if (imageRequestsRef.current.has(destinationId)) {
+      return;
+    }
+
+    imageRequestsRef.current.add(destinationId);
+
+    try {
+      const response = await getDestinationImages(destinationId);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch images");
+      }
+
+      const data = await response.json();
+
+      setImagesByDestination((prev) => ({
+        ...prev,
+        [destinationId]: Array.isArray(data) ? data : [],
+      }));
+    } catch {
+      imageRequestsRef.current.delete(destinationId);
+    }
+  }, []);
+
+  const refreshImages = async (destinationId) => {
+    try {
+      const response = await getDestinationImages(destinationId);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch images");
+      }
+
+      const data = await response.json();
+      const images = Array.isArray(data) ? data : [];
+
+      imageRequestsRef.current.add(destinationId);
+      setImagesByDestination((prev) => ({ ...prev, [destinationId]: images }));
+
+      if (activeImageIdRef.current === destinationId) {
+        setExistingImages(images);
+      }
+    } catch {}
+  };
+
+  const resetImageState = () => {
+    activeImageIdRef.current = null;
+    setExistingImages([]);
+    setImagesLoading(false);
+    setImagesError("");
+    setRemovedImageIds([]);
+    setReplacements({});
+    setNewFiles([]);
+    setImageNotice("");
+  };
+
+  const loadFormImages = async (destinationId) => {
+    activeImageIdRef.current = destinationId;
+    setExistingImages(imagesByDestination[destinationId] || []);
+    setImagesLoading(true);
+    setImagesError("");
+
+    try {
+      const response = await getDestinationImages(destinationId);
+
+      if (!response.ok) {
+        throw new Error("Couldn't load the current photos.");
+      }
+
+      const data = await response.json();
+
+      if (activeImageIdRef.current === destinationId) {
+        setExistingImages(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      if (activeImageIdRef.current === destinationId) {
+        setImagesError(err.message || "Couldn't load the current photos.");
+      }
+    } finally {
+      if (activeImageIdRef.current === destinationId) {
+        setImagesLoading(false);
+      }
+    }
+  };
+
+  const keptImageCount = existingImages.filter(
+    (image) => !removedImageIds.includes(image.id)
+  ).length;
+  const imageSlotsLeft = Math.max(0, MAX_IMAGES - keptImageCount - newFiles.length);
+
+  const addImageFiles = (fileList) => {
+    const messages = [];
+    const accepted = [];
+    let slots = imageSlotsLeft;
+
+    Array.from(fileList || []).forEach((file) => {
+      const problem = validateImageFile(file);
+
+      if (problem) {
+        messages.push(problem);
+        return;
+      }
+
+      if (
+        newFiles.some((item) => isSameFile(item.file, file)) ||
+        accepted.some((item) => isSameFile(item, file))
+      ) {
+        messages.push(`${file.name}: already added.`);
+        return;
+      }
+
+      if (slots <= 0) {
+        messages.push(`${file.name}: a destination can have up to ${MAX_IMAGES} photos.`);
+        return;
+      }
+
+      accepted.push(file);
+      slots -= 1;
+    });
+
+    if (accepted.length > 0) {
+      setNewFiles((prev) => [
+        ...prev,
+        ...accepted.map((file) => {
+          fileKeyRef.current += 1;
+          return { key: fileKeyRef.current, file };
+        }),
+      ]);
+    }
+
+    setImageNotice(messages.join(" "));
+  };
+
+  const replaceImageFile = (imageId, fileList) => {
+    const file = fileList?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const problem = validateImageFile(file);
+
+    setImageNotice(problem);
+
+    if (!problem) {
+      setReplacements((prev) => ({ ...prev, [imageId]: file }));
+    }
+  };
+
+  const undoReplaceImage = (imageId) => {
+    setReplacements((prev) => {
+      const next = { ...prev };
+      delete next[imageId];
+      return next;
+    });
+  };
+
+  const removeExistingImage = (imageId) => {
+    undoReplaceImage(imageId);
+    setRemovedImageIds((prev) => [...prev, imageId]);
+    setImageNotice("");
+  };
+
+  const readDetail = async (response, fallback) => {
+    const data = await response.json().catch(() => null);
+
+    return typeof data?.detail === "string" ? data.detail : fallback;
+  };
+
+  const applyImageChanges = async (destinationId) => {
+    const problems = [];
+
+    for (const imageId of removedImageIds) {
+      try {
+        const response = await deleteDestinationImage(destinationId, imageId);
+
+        if (!response.ok && response.status !== 404) {
+          throw new Error(
+            await readDetail(response, "Couldn't remove a photo.")
+          );
+        }
+
+        setRemovedImageIds((prev) => prev.filter((id) => id !== imageId));
+      } catch (err) {
+        problems.push(err.message || "Couldn't remove a photo.");
+      }
+    }
+
+    for (const [imageId, file] of Object.entries(replacements)) {
+      try {
+        const response = await updateDestinationImage(
+          destinationId,
+          Number(imageId),
+          file
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `${file.name}: ${await readDetail(response, "couldn't replace the photo.")}`
+          );
+        }
+
+        undoReplaceImage(Number(imageId));
+      } catch (err) {
+        problems.push(err.message || "Couldn't replace a photo.");
+      }
+    }
+
+    if (newFiles.length > 0) {
+      try {
+        const response = await uploadDestinationImages(
+          destinationId,
+          newFiles.map((item) => item.file)
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            await readDetail(response, "Couldn't upload the new photos.")
+          );
+        }
+
+        setNewFiles([]);
+      } catch (err) {
+        problems.push(err.message || "Couldn't upload the new photos.");
+      }
+    }
+
+    return problems;
+  };
+
   const fetchInterests = async () => {
     try {
       const response = await getInterests();
@@ -713,6 +1357,7 @@ function AdminHome() {
   };
 
   const openAddForm = () => {
+    resetImageState();
     setEditingId(null);
     setFormData(emptyForm);
     setFormError("");
@@ -720,6 +1365,8 @@ function AdminHome() {
   };
 
   const openEditForm = (destination) => {
+    resetImageState();
+    loadFormImages(destination.id);
     setEditingId(destination.id);
 
     setFormData({
@@ -754,6 +1401,7 @@ function AdminHome() {
     setEditingId(null);
     setFormData(emptyForm);
     setFormError("");
+    resetImageState();
   };
 
   const handleSubmit = async (event) => {
@@ -791,8 +1439,27 @@ function AdminHome() {
 
       const wasEditing = Boolean(editingId);
       const saved = await response.json().catch(() => null);
+      const destinationId = wasEditing ? editingId : saved?.id;
 
-      closeForm();
+      const hasImageChanges =
+        removedImageIds.length > 0 ||
+        Object.keys(replacements).length > 0 ||
+        newFiles.length > 0;
+
+      let imageProblems = [];
+
+      if (hasImageChanges) {
+        if (destinationId === undefined) {
+          imageProblems = [
+            "The server didn't return the new destination's id, so the photos weren't uploaded. Reload the page and add them by editing the destination.",
+          ];
+        } else {
+          setImageNotice("");
+          imageProblems = await applyImageChanges(destinationId);
+          activeImageIdRef.current = destinationId;
+          await refreshImages(destinationId);
+        }
+      }
 
       if (saved && saved.id !== undefined) {
         if (wasEditing) {
@@ -808,6 +1475,20 @@ function AdminHome() {
         }
       } else {
         await fetchDestinations();
+      }
+
+      if (imageProblems.length > 0) {
+        if (!wasEditing && destinationId !== undefined) {
+          setEditingId(destinationId);
+        }
+
+        setFormError(
+          `The destination was saved, but some photo changes failed: ${imageProblems
+            .map((problem) => (/[.!?]$/.test(problem) ? problem : `${problem}.`))
+            .join(" ")} Press Save to try them again.`
+        );
+      } else {
+        closeForm();
       }
     } catch (err) {
       setFormError(err.message);
@@ -827,7 +1508,7 @@ function AdminHome() {
 
         throw new Error(data.detail || "Failed to delete destination");
       }
-      
+
       setDestinations((prev) =>
         prev.filter((item) => item.id !== destination.id)
       );
@@ -919,6 +1600,29 @@ function AdminHome() {
 
             <form onSubmit={handleSubmit}>
               <div className="admin-form-grid">
+                <PhotoManager
+                  existing={existingImages}
+                  removedIds={removedImageIds}
+                  replacements={replacements}
+                  newFiles={newFiles}
+                  loading={imagesLoading}
+                  loadError={imagesError}
+                  notice={imageNotice}
+                  slotsLeft={imageSlotsLeft}
+                  keptCount={keptImageCount}
+                  disabled={submitting}
+                  onAddFiles={addImageFiles}
+                  onRemoveExisting={removeExistingImage}
+                  onUndoRemove={(id) =>
+                    setRemovedImageIds((prev) => prev.filter((x) => x !== id))
+                  }
+                  onReplace={replaceImageFile}
+                  onUndoReplace={undoReplaceImage}
+                  onRemoveNew={(key) =>
+                    setNewFiles((prev) => prev.filter((i) => i.key !== key))
+                  }
+                />
+
                 <div className="admin-form-field">
                   <label htmlFor="name">
                     <Compass size={15} aria-hidden="true" />
@@ -1325,9 +2029,10 @@ function AdminHome() {
                   tabIndex={0}
                   aria-label={`View ${destination.name}`}
                 >
-                  <div
-                    className="admin-destination-image-container"
-                    aria-label={`Image area for ${destination.name}`}
+                  <CardImage
+                    destination={destination}
+                    images={imagesByDestination[destination.id]}
+                    onNeedImages={ensureImages}
                   />
 
                   <div className="admin-destination-main">

@@ -11,7 +11,7 @@ from app.routers.destination_images import router as destination_images_router
 
 app = FastAPI()
 
-UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
+UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount(
