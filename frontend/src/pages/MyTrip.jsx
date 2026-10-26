@@ -1,15 +1,103 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTrips } from "../services/tripService";
+import { getDestinationImages } from "../services/destinationService";
+import { BASE_URL } from "../services/api";
 import "../styles/MyTrip.css";
 
 import {
   CalendarDays,
+  Image as ImageIcon,
   MapPin,
   Plus,
   ArrowRight,
   Map,
 } from "lucide-react";
+
+const getImageUrl = (path) => {
+  if (!path) return "";
+
+  if (/^(https?:|data:|blob:)/.test(path)) {
+    return path;
+  }
+
+  const cleanPath = String(path).replace(/^\/+/, "");
+  const uploadPath = cleanPath.startsWith("uploads/")
+    ? cleanPath
+    : `uploads/${cleanPath}`;
+
+  return `${BASE_URL}/${uploadPath}`;
+};
+
+function FitPhoto({ path, alt = "", className = "" }) {
+  const [broken, setBroken] = useState(false);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [path]);
+
+  const src = getImageUrl(path);
+
+  return (
+    <div
+      className={`trip-photo ${className}`}
+      style={src ? { "--photo": `url("${src.replace(/"/g, "%22")}")` } : undefined}
+    >
+      {!broken && (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TripCover({ destinations, imagesByDestination }) {
+  const withPhotos = destinations.filter(
+    (destination) => imagesByDestination[destination.id]?.length > 0
+  );
+
+  if (withPhotos.length === 0) {
+    return (
+      <div className="my-trip-image-placeholder" aria-hidden="true">
+        <span>No images</span>
+      </div>
+    );
+  }
+
+  const shown = withPhotos.slice(0, 4);
+  const hidden = withPhotos.length - shown.length;
+
+  return (
+    <div
+      className={`my-trip-cover my-trip-cover-${shown.length}`}
+      role="img"
+      aria-label={`Photos from ${withPhotos.length} destination${
+        withPhotos.length !== 1 ? "s" : ""
+      } on this trip`}
+    >
+      {shown.map((destination, index) => (
+        <div className="my-trip-cover-tile" key={destination.id}>
+          <FitPhoto
+            path={imagesByDestination[destination.id][0].image_path}
+          />
+
+          {index === shown.length - 1 && hidden > 0 && (
+            <span className="my-trip-cover-more">+{hidden}</span>
+          )}
+        </div>
+      ))}
+
+      <span className="my-trip-cover-count" title="Destinations with photos">
+        <ImageIcon size={13} aria-hidden="true" />
+        {withPhotos.length}
+      </span>
+    </div>
+  );
+}
 
 function MyTrips() {
   const navigate = useNavigate();
@@ -17,12 +105,42 @@ function MyTrips() {
   const userId = Number(localStorage.getItem("userId"));
 
   const [trips, setTrips] = useState([]);
+  const [imagesByDestination, setImagesByDestination] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     loadTrips();
   }, []);
+
+  function loadImages(tripList) {
+    const ids = new Set();
+
+    tripList.forEach((trip) =>
+      (trip.destinations || []).forEach((destination) =>
+        ids.add(destination.id)
+      )
+    );
+
+    ids.forEach(async (destinationId) => {
+      try {
+        const response = await getDestinationImages(destinationId);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const images = await response.json();
+
+        setImagesByDestination((prev) => ({
+          ...prev,
+          [destinationId]: Array.isArray(images) ? images : [],
+        }));
+      } catch (err) {
+        console.error("Destination image fetch error:", err);
+      }
+    });
+  }
 
   async function loadTrips() {
     try {
@@ -42,6 +160,7 @@ function MyTrips() {
       const data = await response.json();
 
       setTrips(data);
+      loadImages(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -114,12 +233,10 @@ function MyTrips() {
               className="my-trip-card"
               key={trip.id}
             >
-              <div
-                className="my-trip-image-placeholder"
-                aria-hidden="true"
-              >
-                <span>Trip cover</span>
-              </div>
+              <TripCover
+                destinations={trip.destinations}
+                imagesByDestination={imagesByDestination}
+              />
 
               <div className="my-trip-content">
                 <div className="my-trip-card-header">
@@ -154,15 +271,27 @@ function MyTrips() {
                         className="my-trip-destination"
                         key={destination.id}
                       >
-                        <strong>{destination.name}</strong>
-
-                        <span className="my-trip-location">
-                          <MapPin
-                            size={14}
-                            aria-hidden="true"
+                        {imagesByDestination[destination.id]?.[0] && (
+                          <FitPhoto
+                            className="my-trip-destination-photo"
+                            path={
+                              imagesByDestination[destination.id][0]
+                                .image_path
+                            }
                           />
-                          <span>{destination.location}</span>
-                        </span>
+                        )}
+
+                        <div className="my-trip-destination-text">
+                          <strong>{destination.name}</strong>
+
+                          <span className="my-trip-location">
+                            <MapPin
+                              size={14}
+                              aria-hidden="true"
+                            />
+                            <span>{destination.location}</span>
+                          </span>
+                        </div>
                       </div>
                     ))
                   )}

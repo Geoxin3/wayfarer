@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CalendarDays,
   Compass,
+  Image as ImageIcon,
   Luggage,
   LogOut,
   MapPin,
@@ -12,10 +13,68 @@ import {
   X,
 } from "lucide-react";
 import "../styles/Home.css";
-import { getDestinations } from "../services/destinationService";
+import {
+  getDestinations,
+  getDestinationImages,
+} from "../services/destinationService";
+import { BASE_URL } from "../services/api";
+
+const getImageUrl = (path) => {
+  if (!path) return "";
+
+  if (/^(https?:|data:|blob:)/.test(path)) {
+    return path;
+  }
+
+  const cleanPath = String(path).replace(/^\/+/, "");
+  const uploadPath = cleanPath.startsWith("uploads/")
+    ? cleanPath
+    : `uploads/${cleanPath}`;
+
+  return `${BASE_URL}/${uploadPath}`;
+};
+
+function CardImage({ name, images }) {
+  const [broken, setBroken] = useState(false);
+  const cover = images?.[0];
+
+  useEffect(() => {
+    setBroken(false);
+  }, [cover?.image_path]);
+
+  const src = cover && !broken ? getImageUrl(cover.image_path) : "";
+
+  return (
+    <div
+      className="destination-card-image-container"
+      style={src ? { "--photo": `url("${src.replace(/"/g, "%22")}")` } : undefined}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span className="destination-image-placeholder" aria-hidden="true">
+          <ImageIcon size={32} />
+        </span>
+      )}
+
+      {images?.length > 1 && !broken && (
+        <span className="destination-image-count" title={`${images.length} photos`}>
+          <ImageIcon size={13} aria-hidden="true" />
+          {images.length}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function Home() {
   const [destinations, setDestinations] = useState([]);
+  const [imagesByDestination, setImagesByDestination] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -43,6 +102,27 @@ function Home() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showLogoutConfirm]);
 
+  const loadImages = (items) => {
+    items.forEach(async (destination) => {
+      try {
+        const response = await getDestinationImages(destination.id);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+
+        setImagesByDestination((prev) => ({
+          ...prev,
+          [destination.id]: Array.isArray(data) ? data : [],
+        }));
+      } catch (err) {
+        console.error("Destination image fetch error:", err);
+      }
+    });
+  };
+
   useEffect(() => {
     getDestinations(1, 6)
       .then((response) => {
@@ -54,6 +134,7 @@ function Home() {
       })
       .then((data) => {
         setDestinations(data.items);
+        loadImages(data.items);
       })
       .catch((err) => {
         console.error("Destination fetch error:", err);
@@ -111,9 +192,9 @@ function Home() {
                 className="destination-card"
                 key={destination.id}
               >
-                <div
-                  className="destination-card-image-container"
-                  aria-label={`Image area for ${destination.name}`}
+                <CardImage
+                  name={destination.name}
+                  images={imagesByDestination[destination.id]}
                 />
 
                 <span className="destination-category">

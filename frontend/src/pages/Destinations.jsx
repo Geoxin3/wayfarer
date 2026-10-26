@@ -4,18 +4,78 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  Image as ImageIcon,
   MapPin,
   Wallet,
 } from "lucide-react";
 import "../styles/Destinations.css";
 import {
   getDestinations,
+  getDestinationImages,
   getInterests,
 } from "../services/destinationService";
+import { BASE_URL } from "../services/api";
+
+const getImageUrl = (path) => {
+  if (!path) return "";
+
+  if (/^(https?:|data:|blob:)/.test(path)) {
+    return path;
+  }
+
+  const cleanPath = String(path).replace(/^\/+/, "");
+  const uploadPath = cleanPath.startsWith("uploads/")
+    ? cleanPath
+    : `uploads/${cleanPath}`;
+
+  return `${BASE_URL}/${uploadPath}`;
+};
+
+function CardImage({ name, images }) {
+  const [broken, setBroken] = useState(false);
+  const cover = images?.[0];
+
+  useEffect(() => {
+    setBroken(false);
+  }, [cover?.image_path]);
+
+  const src = cover && !broken ? getImageUrl(cover.image_path) : "";
+
+  return (
+    <div
+      className="destination-list-image-container"
+      style={src ? { "--photo": `url("${src.replace(/"/g, "%22")}")` } : undefined}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span className="destination-image-placeholder" aria-hidden="true">
+          <ImageIcon size={34} />
+        </span>
+      )}
+
+      {images?.length > 1 && !broken && (
+        <span
+          className="destination-image-count"
+          title={`${images.length} photos`}
+        >
+          <ImageIcon size={13} aria-hidden="true" />
+          {images.length}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function Destinations() {
   const [destinations, setDestinations] = useState([]);
   const [interests, setInterests] = useState([]);
+  const [imagesByDestination, setImagesByDestination] = useState({});
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,11 +106,33 @@ function Destinations() {
 
       setDestinations(data.items);
       setTotal(data.total);
+      loadImages(data.items);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadImages = (items) => {
+    items.forEach(async (destination) => {
+      try {
+        const response = await getDestinationImages(destination.id);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+
+        setImagesByDestination((prev) => ({
+          ...prev,
+          [destination.id]: Array.isArray(data) ? data : [],
+        }));
+      } catch (err) {
+        console.error("Destination image fetch error:", err);
+      }
+    });
   };
 
   const fetchInterests = async () => {
@@ -108,9 +190,9 @@ function Destinations() {
               className="destination-list-card"
               key={destination.id}
             >
-              <div
-                className="destination-list-image-container"
-                aria-label={`Image area for ${destination.name}`}
+              <CardImage
+                name={destination.name}
+                images={imagesByDestination[destination.id]}
               />
 
               <div className="destination-list-card-top">

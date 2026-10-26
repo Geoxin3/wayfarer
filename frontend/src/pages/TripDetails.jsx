@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
-  ArrowLeft,
   Award,
   CalendarDays,
   Check,
@@ -11,6 +10,7 @@ import {
   Eye,
   EyeOff,
   Heart,
+  Image as ImageIcon,
   MapPin,
   MapPinned,
   Plus,
@@ -30,12 +30,107 @@ import {
 
 import {
   getDestinations,
+  getDestinationImages,
   getInterests,
 } from "../services/destinationService";
 
+import { BASE_URL } from "../services/api";
 import { getRecommendations } from "../services/recommendationService";
 
 import "../styles/TripDetails.css";
+
+const getImageUrl = (path) => {
+  if (!path) return "";
+
+  if (/^(https?:|data:|blob:)/.test(path)) {
+    return path;
+  }
+
+  const cleanPath = String(path).replace(/^\/+/, "");
+  const uploadPath = cleanPath.startsWith("uploads/")
+    ? cleanPath
+    : `uploads/${cleanPath}`;
+
+  return `${BASE_URL}/${uploadPath}`;
+};
+
+function DestinationPhoto({
+  className,
+  destinationId,
+  name,
+  images,
+  onNeedImages,
+}) {
+  const containerRef = useRef(null);
+  const [broken, setBroken] = useState(false);
+  const cover = images?.[0];
+
+  useEffect(() => {
+    if (images !== undefined) {
+      return undefined;
+    }
+
+    const node = containerRef.current;
+
+    if (!node || typeof IntersectionObserver === "undefined") {
+      onNeedImages(destinationId);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          onNeedImages(destinationId);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [images, destinationId, onNeedImages]);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [cover?.image_path]);
+
+  const src = cover && !broken ? getImageUrl(cover.image_path) : "";
+
+  return (
+    <div
+      className={className}
+      ref={containerRef}
+      style={
+        src ? { "--photo": `url("${src.replace(/"/g, "%22")}")` } : undefined
+      }
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span className="destination-image-placeholder" aria-hidden="true">
+          <ImageIcon size={30} />
+        </span>
+      )}
+
+      {images?.length > 1 && !broken && (
+        <span
+          className="destination-image-count"
+          title={`${images.length} photos`}
+        >
+          <ImageIcon size={13} aria-hidden="true" />
+          {images.length}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function TripDetails() {
   const { tripId } = useParams();
@@ -47,6 +142,9 @@ function TripDetails() {
 
   const [trip, setTrip] = useState(null);
   const [destinations, setDestinations] = useState([]);
+
+  const [imagesByDestination, setImagesByDestination] = useState({});
+  const imageRequestsRef = useRef(new Set());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,6 +207,31 @@ function TripDetails() {
       sessionStorage.removeItem(`recommendation-form-${tripId}`);
     }
   }, [tripId]);
+
+  const ensureImages = useCallback(async (destinationId) => {
+    if (imageRequestsRef.current.has(destinationId)) {
+      return;
+    }
+
+    imageRequestsRef.current.add(destinationId);
+
+    try {
+      const response = await getDestinationImages(destinationId);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch images");
+      }
+
+      const data = await response.json();
+
+      setImagesByDestination((prev) => ({
+        ...prev,
+        [destinationId]: Array.isArray(data) ? data : [],
+      }));
+    } catch {
+      imageRequestsRef.current.delete(destinationId);
+    }
+  }, []);
 
   /*
    * `silent` refreshes the trip without swapping the whole page for the
@@ -682,9 +805,16 @@ function TripDetails() {
                         role="link"
                         tabIndex={0}
                       >
-                        <div
+                        <DestinationPhoto
                           className="recommendation-image-container"
-                          aria-label={`Image area for ${recommendation.destination.name}`}
+                          destinationId={recommendation.destination.id}
+                          name={recommendation.destination.name}
+                          images={
+                            imagesByDestination[
+                              recommendation.destination.id
+                            ]
+                          }
+                          onNeedImages={ensureImages}
                         />
 
                         <div className="recommendation-card-content">
@@ -933,9 +1063,12 @@ function TripDetails() {
                     role="link"
                     tabIndex={0}
                   >
-                  <div
+                  <DestinationPhoto
                     className="trip-destination-image-container"
-                    aria-label={`Image area for ${destination.name}`}
+                    destinationId={destination.id}
+                    name={destination.name}
+                    images={imagesByDestination[destination.id]}
+                    onNeedImages={ensureImages}
                   />
 
                   <div className="destination-card-content">
@@ -1015,9 +1148,12 @@ function TripDetails() {
                     key={destination.id}
                     onClick={() => openDestination(destination.id)}
                   >
-                  <div
+                  <DestinationPhoto
                     className="catalog-destination-image-container"
-                    aria-label={`Image area for ${destination.name}`}
+                    destinationId={destination.id}
+                    name={destination.name}
+                    images={imagesByDestination[destination.id]}
+                    onNeedImages={ensureImages}
                   />
 
                   <div>

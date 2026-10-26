@@ -288,9 +288,9 @@
   display: flex;
   min-width: 0;
   flex: 0 1 auto;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
 
   padding: 10px 14px;
 
@@ -312,6 +312,14 @@
   font-size: 12px;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.my-trip-destination-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
 }
 
 /* Destination location with pin icon */
@@ -494,7 +502,8 @@
     border-radius: 18px;
   }
 
-  .my-trip-image-placeholder {
+  .my-trip-image-placeholder,
+  .my-trip-cover {
     min-height: 150px;
   }
 
@@ -536,7 +545,8 @@
     border-radius: 16px;
   }
 
-  .my-trip-image-placeholder {
+  .my-trip-image-placeholder,
+  .my-trip-cover {
     min-height: 175px;
     max-height: 210px;
   }
@@ -571,6 +581,113 @@
   .my-trips-empty .plan-trip-button {
     width: 100%;
   }
+}
+
+/* A photo shown whole over a blurred copy of itself */
+.my-trips-page .trip-photo {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #eef2ff;
+}
+
+.my-trips-page .trip-photo::before {
+  content: "";
+  position: absolute;
+  inset: -16px;
+  z-index: 0;
+  background: var(--photo) center / cover no-repeat;
+  filter: blur(14px) saturate(1.15);
+  opacity: 0.6;
+}
+
+.my-trips-page .trip-photo img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Trip cover: a collage of up to four destination photos */
+.my-trip-cover {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  min-height: 180px;
+  overflow: hidden;
+
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.my-trip-cover-1 {
+  grid-template: 1fr / 1fr;
+}
+
+.my-trip-cover-2 {
+  grid-template: 1fr / 1fr 1fr;
+}
+
+.my-trip-cover-3 {
+  grid-template: 1fr 1fr / 1.35fr 1fr;
+}
+
+.my-trip-cover-3 .my-trip-cover-tile:first-child {
+  grid-row: 1 / span 2;
+}
+
+.my-trip-cover-4 {
+  grid-template: 1fr 1fr / 1fr 1fr;
+}
+
+.my-trip-cover-tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.my-trip-cover-more {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(24, 16, 52, 0.55);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.my-trip-cover-count {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+
+  border-radius: 999px;
+  background: rgba(24, 16, 52, 0.72);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Small photo in front of a destination name */
+.my-trips-page .my-trip-destination-photo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
 }
 
 @media (prefers-reduced-motion: reduce) {
