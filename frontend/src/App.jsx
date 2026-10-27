@@ -10,11 +10,14 @@ import AdminHome from "./admin/AdminHome";
 import MyTrips from "./pages/MyTrip";
 import PlanTrip from "./pages/PlanTrip";
 import TripDetails from "./pages/TripDetails";
+import Landing from "./Landing";
 
   function App() {
     return (
       <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<Landing />} />
+
+          <Route path="/login" element={<Login />} />
 
           <Route path="/register" element={<Register />} />
 

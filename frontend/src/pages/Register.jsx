@@ -98,7 +98,7 @@ function Register() {
       setSuccess("Account created successfully! Please log in.");
 
       setTimeout(() => {
-        navigate("/", { replace: true });
+        navigate("/login", { replace: true });
       }, 2000);
     } catch {
       setErrors({
@@ -231,7 +231,7 @@ function Register() {
 
         <div className="login-link">
           Already have an account?{" "}
-          <Link to="/">Login</Link>
+          <Link to="/login">Login</Link>
         </div>
       </div>
     </div>
